@@ -1,0 +1,61 @@
+// =============================================================================
+// INPUT TRIM BLOCK - Maximizer
+// =============================================================================
+// Procesamiento de entrada con ganancia ajustable y lookahead
+//
+// ENTRADAS:
+// - in1: Audio L
+// - in2: Audio R
+//
+// SALIDAS:
+// - out1: L con trim y delay
+// - out2: R con trim y delay
+// - out3: L con trim sin delay (para detección)
+// - out4: R con trim sin delay (para detección)
+// =============================================================================
+
+// PARÁMETROS
+Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)
+Param n_LOOKAHEAD(0, min=0, default=2, max=5);     // Lookahead time (ms)
+
+// HISTORIAS
+History trimHistory(0);          // Para suavizado del trim
+History lookaheadHistory(0);     // Para suavizado del lookahead
+
+// DELAYS
+Delay leftOutputDelay(samplerate);     // Delay señal izquierda
+Delay rightOutputDelay(samplerate);    // Delay señal derecha
+
+// CONSTANTES
+SMOOTH_HISTORY_FACTOR = 0.999;
+SMOOTH_PARAM_FACTOR = 0.001;
+LOOKAHEAD_SMOOTH_FACTOR = 0.99;
+
+// PROCESAMIENTO
+// Suavizado del trim
+smoothedTrim = trimHistory * SMOOTH_HISTORY_FACTOR + j_TRIM * SMOOTH_PARAM_FACTOR;
+trimHistory = fixdenorm(smoothedTrim);
+trimGainLinear = dbtoa(smoothedTrim);
+
+// Suavizado del lookahead
+smoothedLookahead = lookaheadHistory * LOOKAHEAD_SMOOTH_FACTOR + n_LOOKAHEAD * (1 - LOOKAHEAD_SMOOTH_FACTOR);
+lookaheadHistory = fixdenorm(smoothedLookahead);
+lookaheadSamples = mstosamps(smoothedLookahead);
+
+// Aplicar trim
+leftTrimmed = in1 * trimGainLinear;
+rightTrimmed = in2 * trimGainLinear;
+
+// Leer señales retrasadas
+leftDelayed = leftOutputDelay.read(lookaheadSamples, interp="linear");
+rightDelayed = rightOutputDelay.read(lookaheadSamples, interp="linear");
+
+// Escribir en delays
+leftOutputDelay.write(leftTrimmed);
+rightOutputDelay.write(rightTrimmed);
+
+// SALIDAS
+out1 = leftDelayed;       // L con delay
+out2 = rightDelayed;      // R con delay
+out3 = leftTrimmed;       // L sin delay (para detección)
+out4 = rightTrimmed;      // R sin delay (para detección)

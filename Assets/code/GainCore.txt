@@ -1,0 +1,85 @@
+// =============================================================================
+// GAIN PROCESSOR BLOCK - Maximizer
+// =============================================================================
+// Cálculo y aplicación de reducción de ganancia con soft knee limiter
+//
+// ENTRADAS:
+// - in1: Envolvente en dB (desde Detector)
+// - in2: Ceiling suavizado en dB (desde Detector)
+// - in3: Señal L con delay (desde InputTrim)
+// - in4: Señal R con delay (desde InputTrim)
+// - in5: Señal L escalada (desde Detector para delta)
+// - in6: Señal R escalada (desde Detector para delta)
+//
+// SALIDAS:
+// - out1: Señal L procesada
+// - out2: Señal R procesada
+// - out3: Señal L escalada (para delta en Output)
+// - out4: Señal R escalada (para delta en Output)
+// - out5: Reducción de ganancia lineal (para medidor)
+// =============================================================================
+
+// FUNCIÓN SOFT KNEE LIMITER
+softkneeLimiter(xg, threshold, kneeWidth) {
+    ret = 0;
+    
+    if ((2 * (xg - threshold)) < (kneeWidth * (-1))) {
+        ret = xg;
+    }
+    else if ((2 * abs(xg - threshold)) <= kneeWidth) {
+        ret = xg - (pow((xg - threshold) - (kneeWidth / 2), 2) / (2 * kneeWidth));
+    }
+    else if ((2 * (xg - threshold)) > kneeWidth) {
+        ret = threshold;
+    }
+    
+    return ret;
+}
+
+// PARÁMETROS
+Param g_DITHER(0, min=0, default=0, max=1);  // Cantidad de dither (0-1)
+
+// HISTORIAS
+History ditherHistory(0);
+
+// CONSTANTES
+ditherAmount = 1.5258789062e-05;
+SMOOTH_HISTORY_FACTOR = 0.999;
+SMOOTH_PARAM_FACTOR = 0.001;
+
+// PROCESAMIENTO
+// Suavizado del dither
+smoothedDither = ditherHistory * SMOOTH_HISTORY_FACTOR + g_DITHER * SMOOTH_PARAM_FACTOR;
+ditherHistory = fixdenorm(smoothedDither);
+
+// Aplicar soft knee limiter
+limitedDb = softkneeLimiter(in1, in2, 0);
+
+// Calcular reducción de ganancia
+gainReductionAmount = limitedDb - in1;
+gainReductionAmount = max(gainReductionAmount, -144);
+gainReductionLinear = dbtoa(gainReductionAmount);
+
+// Límites del ceiling
+ceilingLinear = dbtoa(in2);
+ceilingNegative = ceilingLinear * -1;
+ceilingPositive = ceilingLinear * 1;
+
+// Generar dither
+ditherNoise = noise() * ditherAmount;
+ditherGated = gate(smoothedDither, ditherNoise);
+
+// Aplicar reducción a canal izquierdo
+leftProcessed = in5 * gainReductionLinear;
+leftClipped = clamp(leftProcessed + ditherGated, ceilingNegative, ceilingPositive);
+
+// Aplicar reducción a canal derecho
+rightProcessed = in6 * gainReductionLinear;
+rightClipped = clamp(ditherGated + rightProcessed, ceilingNegative, ceilingPositive);
+
+// SALIDAS
+out1 = leftClipped;           // L procesada
+out2 = rightClipped;          // R procesada
+out3 = in5;                   // L escalada (pass-through para delta)
+out4 = in6;                   // R escalada (pass-through para delta)
+out5 = gainReductionLinear;   // Para medidor (0-1)

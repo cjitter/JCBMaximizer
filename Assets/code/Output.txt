@@ -1,0 +1,61 @@
+// =============================================================================
+// OUTPUT BLOCK - Maximizer
+// =============================================================================
+// Procesamiento de salida con modo Delta, Bypass y medición
+//
+// ENTRADAS:
+// - in1: Señal L procesada (desde GainProcessor)
+// - in2: Señal R procesada (desde GainProcessor)
+// - in3: Señal L original con delay (desde InputTrim)
+// - in4: Señal R original con delay (desde InputTrim)
+// - in5: Señal L escalada con delay (desde GainProcessor para delta)
+// - in6: Señal R escalada con delay (desde GainProcessor para delta)
+// - in7: Reducción de ganancia lineal (desde GainProcessor)
+//
+// SALIDAS:
+// - out1: Audio L final
+// - out2: Audio R final
+// - out3: Gain reduction para medidor (0-1)
+// =============================================================================
+
+// PARÁMETROS
+Param h_BYPASS(0, min=0, default=0, max=1);    // Bypass del efecto (0-1)
+Param k_DELTA(0, min=0, default=0, max=1);     // Delta mode (0-1)
+
+// HISTORIAS
+History smoothedBypass(0);       // Suavizado del bypass
+History deltaHistory(0);         // Suavizado del modo delta
+
+// CONSTANTES
+SMOOTH_HISTORY_FACTOR = 0.999;
+SMOOTH_PARAM_FACTOR = 0.001;
+
+// PROCESAMIENTO
+// Suavizado de parámetros
+smoothedBypass = smoothedBypass * SMOOTH_HISTORY_FACTOR + h_BYPASS * SMOOTH_PARAM_FACTOR;
+smoothedBypass = fixdenorm(smoothedBypass);
+wetAmount = 1 - smoothedBypass;
+
+smoothedDelta = deltaHistory * SMOOTH_HISTORY_FACTOR + k_DELTA * SMOOTH_PARAM_FACTOR;
+deltaHistory = fixdenorm(smoothedDelta);
+
+// Modo delta - calcular diferencia
+leftDelta = in5 - in1;    // Diferencia entre escalada y procesada
+rightDelta = in6 - in2;   // Diferencia entre escalada y procesada
+
+// Aplicar modo delta
+leftWithDelta = mix(in1, leftDelta, smoothedDelta);
+rightWithDelta = mix(in2, rightDelta, smoothedDelta);
+
+// Aplicar bypass
+leftFinal = mix(in3, leftWithDelta, wetAmount);
+rightFinal = mix(in4, rightWithDelta, wetAmount);
+
+// Gain reduction para medidor
+gainReductionMeter = mix(1, in7, wetAmount);
+gainReductionOutput = clamp(gainReductionMeter, 0, 1);
+
+// SALIDAS
+out1 = leftFinal;            // Audio L final
+out2 = rightFinal;           // Audio R final
+out3 = gainReductionOutput;  // Gain reduction (0-1)
