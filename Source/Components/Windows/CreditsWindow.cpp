@@ -324,7 +324,7 @@ void CreditsWindow::buildFullCreditsTextSpanish()
     links.clear();
     
     // Generar texto formateado con saltos de línea para llenar el diálogo
-    fullText = "\nJCBMaximizer v0.9.1 beta";
+    fullText = "\nJCBMaximizer v0.9.0 beta";
     if (pluginFormat.isNotEmpty())
         fullText += " (" + pluginFormat + ")";
     fullText += "\n";

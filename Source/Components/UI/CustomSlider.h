@@ -283,6 +283,7 @@ public:
             if (name == "again" || id == "again") return "AGAIN";
             if (name == "smo" || id == "smo") return "SMO";
             if (name == "ceiling" || id == "ceiling") return "CEIL";
+            if (name == "detect" || id == "detect") return "DET";  // NUEVO - label para detection slider
             
             return "";
         }

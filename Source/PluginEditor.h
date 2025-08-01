@@ -212,27 +212,35 @@ private:
     // Controles izquierdos - fila inferior
     struct LeftBottomKnobs {
         // MAXIMIZER: o_DRYWET y u_SOFTCLIP no existen - eliminados según CONTEXTO.txt
-        CustomSlider lookaheadSlider{"lookahead"};
+        // MAXIMIZER: lookaheadSlider movido a RightTopControls para mejor distribución visual
+        juce::TextButton ditherButton{"DITHER"};  // NUEVO - parámetro g_DITHER
         
         // MAXIMIZER: drywetAttachment y clipAttachment eliminados - parámetros inexistentes
-        std::unique_ptr<CustomSliderAttachment> lookaheadAttachment;
+        // MAXIMIZER: lookaheadAttachment movido a RightTopControls
+        std::unique_ptr<UndoableButtonAttachment> ditherAttachment;  // NUEVO - attachment para g_DITHER
     } leftBottomKnobs;
     
     // Controles derechos - fila superior
     struct RightTopControls {
         // MAXIMIZER: h_RANGE, g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
+        CustomSlider detSlider{"detect"};  // NUEVO - parámetro l_DETECT (Peak/RMS detection)
+        CustomSlider lookaheadSlider{"lookahead"};  // MOVIDO desde LeftBottomKnobs para mejor distribución visual
         
         // MAXIMIZER: rangeAttachment, reactAttachment y smoothAttachment eliminados - parámetros inexistentes
+        std::unique_ptr<CustomSliderAttachment> detAttachment;  // NUEVO - attachment para l_DETECT
+        std::unique_ptr<CustomSliderAttachment> lookaheadAttachment;  // MOVIDO desde LeftBottomKnobs
     } rightTopControls;
     
     // Controles derechos, fila inferior
     struct RightBottomKnobs {
         CustomSlider atkSlider{"attack"};
         CustomSlider relSlider{"release"};
+        juce::TextButton autorelButton{"AUTOREL"};  // NUEVO - parámetro m_AUTOREL
         // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
         
         std::unique_ptr<CustomSliderAttachment> atkAttachment;
         std::unique_ptr<CustomSliderAttachment> relAttachment;
+        std::unique_ptr<UndoableButtonAttachment> autorelAttachment;  // NUEVO - attachment para m_AUTOREL
         // MAXIMIZER: holdAttachment eliminado - parámetro inexistente
     } rightBottomKnobs;
     

@@ -714,7 +714,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
 
    // e_REL @min 1 @max 1500 @default 50 (cambiar rango y default para Maximizer)
    auto relRange = juce::NormalisableRange<float>(
-       1.f, 1500.f,
+       1.f, 750.f,
        [](float start, float end, float normalised) {
            return start + (end - start) * std::pow(normalised, 1.4f);
        },
@@ -789,7 +789,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
                                                              juce::AudioParameterFloat::genericParameter,
                                                              [](float value, int){
                                                                  if (value < 0.01f)
-                                                                     return juce::String("PEAK");
+                                                                     return juce::String("Peak");
                                                                  else if (value > 0.99f)
                                                                      return juce::String("RMS");
                                                                  else

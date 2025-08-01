@@ -453,27 +453,44 @@ void JCBMaximizerAudioProcessorEditor::resized()
     float w = 335.0f * 700.0f / 1247.0f;
     float h = 205.0f * 200.0f / 353.0f - 5.0f;
     transferDisplay.setBounds(getScaledBounds(x, y, w, h));
+    
+    // === PARAMETER BUTTONS (ENCIMA DE TRANSFER FUNCTION) ===
+    // Botones DITHER, DELTA y BYPASS en fila horizontal superior central
+    leftBottomKnobs.ditherButton.setBounds(getScaledBounds(272, 17, 50, 12));
+    parameterButtons.deltaButton.setBounds(getScaledBounds(327, 17, 50, 12));
+    parameterButtons.bypassButton.setBounds(getScaledBounds(382, 17, 50, 12));
+    
     // === LEFT SIDE KNOBS === (Between SC meters and transfer function)
     // Top row - THD, CEILING (MAXIMIZER-specific parameters)
-    leftTopKnobs.thdSlider.setBounds(getScaledBounds(50, 48, 53, 53));
-    leftTopKnobs.ceilingSlider.setBounds(getScaledBounds(123, 48, 53, 53));  // NUEVO - b_CELLING slider
+    leftTopKnobs.thdSlider.setBounds(getScaledBounds(60, 63, 75, 75));
+    leftTopKnobs.ceilingSlider.setBounds(getScaledBounds(150, 63, 75, 75));  // NUEVO - b_CELLING slider
     // MAXIMIZER: c_RATIO no existe - eliminado según CONTEXTO.txt
     // MAXIMIZER: h_RANGE no existe - eliminado según CONTEXTO.txt
     // MAXIMIZER: q_KNEE no existe - eliminado según CONTEXTO.txt
 
     // Bottom row - D/W, LA, CLIP (AGAIN está en fila superior)
     // MAXIMIZER: o_DRYWET no existe - eliminado según CONTEXTO.txt
-    leftBottomKnobs.lookaheadSlider.setBounds(getScaledBounds(124, 100, 53, 53));
+    // MAXIMIZER: lookaheadSlider movido a rightTopControls
     // MAXIMIZER: u_SOFTCLIP no existe - eliminado según CONTEXTO.txt
+    
 
     // === RIGHT SIDE CONTROLS ===
     // Top row - REACT, SMOOTH knobs (RANGE moved to left side)
     // MAXIMIZER: g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
+    
+    // NUEVO: DET knob - área derecha superior
+    rightTopControls.detSlider.setBounds(getScaledBounds(473, 48, 53, 53));
+    
+    // MOVIDO: LOOKAHEAD knob - centro de la parte derecha superior 
+    rightTopControls.lookaheadSlider.setBounds(getScaledBounds(532, 75, 53, 53));
 
     // Bottom row - Attack, Release, Hold
     rightBottomKnobs.atkSlider.setBounds(getScaledBounds(473, 100, 53, 53));
     // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
     rightBottomKnobs.relSlider.setBounds(getScaledBounds(592, 100, 53, 53));
+    
+    // NUEVO: AUTOREL button - área derecha inferior, junto al REL
+    rightBottomKnobs.autorelButton.setBounds(getScaledBounds(590, 60, 53, 20));
 
     // === SIDECHAIN CONTROLS (TOP CENTER) ===
     // HPF and LPF knobs swapped with their order buttons
@@ -526,14 +543,10 @@ void JCBMaximizerAudioProcessorEditor::resized()
     // Botones DELTA, DIAGRAM y BYPASS - DIAGRAM alineado con botones de sidechain arriba
     const int centerButtonsY = 163;
     const int diagramCenterX = 355; // Mismo centerX que botones de sidechain
-    const int buttonSpacing = 45;   // Espaciado entre DELTA-DIAGRAM y DIAGRAM-BYPASS
+    //const int buttonSpacing = 45;   // Espaciado entre DELTA-DIAGRAM y DIAGRAM-BYPASS
     
     // DIAGRAM centrado en mismo X que botones de sidechain (FILTERS, EXT KEY, SOLO SC)
     centerButtons.diagramButton.setBounds(getScaledBounds(diagramCenterX - 22, centerButtonsY, 44, 12));
-    // DELTA a la izquierda de DIAGRAM
-    parameterButtons.deltaButton.setBounds(getScaledBounds(diagramCenterX - buttonSpacing - 20, centerButtonsY, 40, 12));
-    // BYPASS a la derecha de DIAGRAM  
-    parameterButtons.bypassButton.setBounds(getScaledBounds(diagramCenterX + buttonSpacing - 20, centerButtonsY, 40, 12));
     
     // Botones TODO movidos abajo a la derecha, centrados en el rectángulo
     // Calcular posición central para el grupo de botones TODO
@@ -1128,6 +1141,9 @@ void JCBMaximizerAudioProcessorEditor::handleParameterChange()
         // Nota: El tooltip se actualiza automáticamente via getTooltipText("extkey") en updateAllTooltips()
     }
     */
+    
+    // NUEVO: Actualizar alpha del REL slider basado en estado de AUTOREL
+    updateRelSliderAlpha();
 }
 
 
@@ -1165,17 +1181,25 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     // CEILING (b_CELLING) - NUEVO slider específico del Maximizer
     leftTopKnobs.ceilingSlider.setComponentID("ceiling");
     leftTopKnobs.ceilingSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    leftTopKnobs.ceilingSlider.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 70, 16);
+    leftTopKnobs.ceilingSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 16);
     leftTopKnobs.ceilingSlider.setLookAndFeel(&sliderLAFBig);
     leftTopKnobs.ceilingSlider.setTextBoxIsEditable(true);
     leftTopKnobs.ceilingSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     leftTopKnobs.ceilingSlider.setDoubleClickReturnValue(true, 0.0);  // Default: 0 dB
     leftTopKnobs.ceilingSlider.setPopupDisplayEnabled(false, false, this);
     leftTopKnobs.ceilingSlider.setNumDecimalPlacesToDisplay(1);
-    leftTopKnobs.ceilingSlider.setTextValueSuffix(" dB");
+    // Custom text formatting para mostrar "-12 dB" en el medio
+    leftTopKnobs.ceilingSlider.textFromValueFunction = [](double value) {
+        // Mostrar "-12 dB" cuando el valor esté cerca de -12 dB
+        if (std::abs(value - (-12.0)) < 0.05)  // Tolerancia de ±0.05 dB
+            return juce::String("-12 dB");
+        else
+            return juce::String(value, 1) + " dB";  // Formato normal con 1 decimal
+    };
     // Rango: -60 dB a 0 dB (según PluginProcessor.cpp)
     leftTopKnobs.ceilingSlider.setRange(-60.0, 0.0, 0.1);
-    // Sin skew factor - rango lineal para ceiling
+    // Centrar control visual en -12 dB para mejor resolución
+    leftTopKnobs.ceilingSlider.setSkewFactorFromMidPoint(-12.0);
     addAndMakeVisible(leftTopKnobs.ceilingSlider);
     if (auto* param = processor.apvts.getParameter("b_CELLING"))
     {
@@ -1191,27 +1215,27 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
 
     // MAXIMIZER: o_DRYWET no existe - eliminado según CONTEXTO.txt
     
-    // LA (Anticipación)
-    leftBottomKnobs.lookaheadSlider.setComponentID("lookahead");
-    leftBottomKnobs.lookaheadSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    leftBottomKnobs.lookaheadSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 16);
-    leftBottomKnobs.lookaheadSlider.setLookAndFeel(&sliderLAFBig);
-    leftBottomKnobs.lookaheadSlider.setTextBoxIsEditable(true);
-    leftBottomKnobs.lookaheadSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    leftBottomKnobs.lookaheadSlider.setTextValueSuffix(" ms");
-    leftBottomKnobs.lookaheadSlider.setRange(0.0, 10.0, 0.1);
-    leftBottomKnobs.lookaheadSlider.setValue(0.0);
-    leftBottomKnobs.lookaheadSlider.setDoubleClickReturnValue(true, 0.0);
-    leftBottomKnobs.lookaheadSlider.setPopupDisplayEnabled(false, false, this);
-    leftBottomKnobs.lookaheadSlider.setNumDecimalPlacesToDisplay(1);
-    addAndMakeVisible(leftBottomKnobs.lookaheadSlider);
+    // LA (Anticipación) - MOVIDO a rightTopControls
+    rightTopControls.lookaheadSlider.setComponentID("lookahead");
+    rightTopControls.lookaheadSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    rightTopControls.lookaheadSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 16);
+    rightTopControls.lookaheadSlider.setLookAndFeel(&sliderLAFBig);
+    rightTopControls.lookaheadSlider.setTextBoxIsEditable(true);
+    rightTopControls.lookaheadSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    rightTopControls.lookaheadSlider.setTextValueSuffix(" ms");
+    rightTopControls.lookaheadSlider.setRange(0.0, 10.0, 0.1);
+    rightTopControls.lookaheadSlider.setValue(0.0);
+    rightTopControls.lookaheadSlider.setDoubleClickReturnValue(true, 0.0);
+    rightTopControls.lookaheadSlider.setPopupDisplayEnabled(false, false, this);
+    rightTopControls.lookaheadSlider.setNumDecimalPlacesToDisplay(1);
+    addAndMakeVisible(rightTopControls.lookaheadSlider);
     if (auto* param = processor.apvts.getParameter("n_LOOKAHEAD"))
     {
-        leftBottomKnobs.lookaheadAttachment = std::make_unique<CustomSliderAttachment>(
-            *param, leftBottomKnobs.lookaheadSlider, &undoManager);
-        leftBottomKnobs.lookaheadAttachment->onParameterChange = [this]() { handleParameterChange(); };
+        rightTopControls.lookaheadAttachment = std::make_unique<CustomSliderAttachment>(
+            *param, rightTopControls.lookaheadSlider, &undoManager);
+        rightTopControls.lookaheadAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
-    leftBottomKnobs.lookaheadSlider.setTooltip(JUCE_UTF8("LOOKAHEAD: anticipación entre 0 y 10 ms.\nEvita distorsión en transitorios rápidos.\nValor por defecto: 0 ms"));
+    rightTopControls.lookaheadSlider.setTooltip(JUCE_UTF8("LOOKAHEAD: anticipación entre 0 y 10 ms.\nEvita distorsión en transitorios rápidos.\nValor por defecto: 0 ms"));
     
     // MAXIMIZER: u_SOFTCLIP no existe - eliminado según CONTEXTO.txt
     
@@ -1277,6 +1301,69 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
             *param, rightBottomKnobs.relSlider, &undoManager);
         rightBottomKnobs.relAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
+
+    // === NUEVOS CONTROLES MAXIMIZER ===
+    
+    // DITHER button - área izquierda
+    leftBottomKnobs.ditherButton.setComponentID("dither");
+    leftBottomKnobs.ditherButton.setLookAndFeel(&smallButtonLAF);
+    leftBottomKnobs.ditherButton.setButtonText("DITHER");
+    leftBottomKnobs.ditherButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    leftBottomKnobs.ditherButton.setColour(juce::TextButton::buttonOnColourId, DarkTheme::accent);
+    leftBottomKnobs.ditherButton.setColour(juce::TextButton::textColourOffId, DarkTheme::textPrimary);
+    leftBottomKnobs.ditherButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    leftBottomKnobs.ditherButton.setClickingTogglesState(true);
+    addAndMakeVisible(leftBottomKnobs.ditherButton);
+    if (auto* param = processor.apvts.getParameter("g_DITHER"))
+    {
+        leftBottomKnobs.ditherAttachment = std::make_unique<UndoableButtonAttachment>(
+            *param, leftBottomKnobs.ditherButton, &undoManager);
+    }
+    leftBottomKnobs.ditherButton.setTooltip("DITHER: Añade dither para reducir artefactos de cuantización\nen niveles de señal muy bajos");
+    
+    // DET knob - área derecha superior  
+    rightTopControls.detSlider.setComponentID("detect");
+    rightTopControls.detSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    rightTopControls.detSlider.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 70, 16);
+    rightTopControls.detSlider.setLookAndFeel(&sliderLAFBig);
+    rightTopControls.detSlider.setTextBoxIsEditable(true);
+    rightTopControls.detSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    rightTopControls.detSlider.setRange(0.0, 1.0, 0.01);
+    rightTopControls.detSlider.setValue(0.0);
+    rightTopControls.detSlider.setDoubleClickReturnValue(true, 0.0);
+    rightTopControls.detSlider.setPopupDisplayEnabled(false, false, this);
+    rightTopControls.detSlider.setNumDecimalPlacesToDisplay(2);
+    // Custom text formatting para mostrar Peak/RMS
+    rightTopControls.detSlider.textFromValueFunction = [](double value) {
+        if (value < 0.01) return juce::String("Peak");
+        else if (value > 0.99) return juce::String("RMS");
+        else return juce::String(value, 2);
+    };
+    addAndMakeVisible(rightTopControls.detSlider);
+    if (auto* param = processor.apvts.getParameter("l_DETECT"))
+    {
+        rightTopControls.detAttachment = std::make_unique<CustomSliderAttachment>(
+            *param, rightTopControls.detSlider, &undoManager);
+        rightTopControls.detAttachment->onParameterChange = [this]() { handleParameterChange(); };
+    }
+    
+    // AUTOREL button - área derecha inferior, junto a REL
+    rightBottomKnobs.autorelButton.setComponentID("autorel");
+    rightBottomKnobs.autorelButton.setLookAndFeel(&smallButtonLAF);
+    rightBottomKnobs.autorelButton.setButtonText("AUTOREL");
+    rightBottomKnobs.autorelButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    rightBottomKnobs.autorelButton.setColour(juce::TextButton::buttonOnColourId, DarkTheme::accent);
+    rightBottomKnobs.autorelButton.setColour(juce::TextButton::textColourOffId, DarkTheme::textPrimary);
+    rightBottomKnobs.autorelButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    rightBottomKnobs.autorelButton.setClickingTogglesState(true);
+    addAndMakeVisible(rightBottomKnobs.autorelButton);
+    if (auto* param = processor.apvts.getParameter("m_AUTOREL"))
+    {
+        rightBottomKnobs.autorelAttachment = std::make_unique<UndoableButtonAttachment>(
+            *param, rightBottomKnobs.autorelButton, &undoManager);
+        rightBottomKnobs.autorelAttachment->onParameterChange = [this]() { handleParameterChange(); };
+    } 
+    rightBottomKnobs.autorelButton.setTooltip("AUTOREL: Liberación automática adaptativa\nActiva release inteligente basado en el material de audio");
 
     // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
 
@@ -1576,7 +1663,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
             if (auto* param = processor.apvts.getParameter("n_LOOKAHEAD")) {
                 float defaultValue = param->getDefaultValue();
                 float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
-                leftBottomKnobs.lookaheadSlider.setValue(realValue, juce::sendNotificationSync);
+                rightTopControls.lookaheadSlider.setValue(realValue, juce::sendNotificationSync);
             }
             // MAXIMIZER: o_DRYWET no existe - comentado según CONTEXTO.txt
             /*
@@ -2280,7 +2367,7 @@ void JCBMaximizerAudioProcessorEditor::updateSliderValues()
     //     leftBottomKnobs.drywetSlider.setValue(param->load(), juce::dontSendNotification);
         
     if (auto* param = processor.apvts.getRawParameterValue("n_LOOKAHEAD"))
-        leftBottomKnobs.lookaheadSlider.setValue(param->load(), juce::dontSendNotification);
+        rightTopControls.lookaheadSlider.setValue(param->load(), juce::dontSendNotification);
         
     // MAXIMIZER: u_SOFTCLIP no existe - parámetro eliminado según CONTEXTO.txt
     // if (auto* param = processor.apvts.getRawParameterValue("u_SOFTCLIP"))
@@ -2336,6 +2423,9 @@ void JCBMaximizerAudioProcessorEditor::updateSliderValues()
         scTrimSlider.setValue(scTrimValue, juce::dontSendNotification);
     }
     */
+    
+    // NUEVO: Actualizar alpha del REL slider basado en estado inicial de AUTOREL
+    updateRelSliderAlpha();
 }
 
 void JCBMaximizerAudioProcessorEditor::resetGuiSize()
@@ -2860,7 +2950,7 @@ void JCBMaximizerAudioProcessorEditor::updateAllTooltips()
     // Perillas - inferiores izquierdas
     // MAXIMIZER: o_DRYWET no existe - comentado según CONTEXTO.txt
     // leftBottomKnobs.drywetSlider.setTooltip(getTooltipText("drywet"));
-    leftBottomKnobs.lookaheadSlider.setTooltip(getTooltipText("lookahead"));
+    rightTopControls.lookaheadSlider.setTooltip(getTooltipText("lookahead"));
     // MAXIMIZER: u_SOFTCLIP no existe - comentado según CONTEXTO.txt
     // leftBottomKnobs.clipSlider.setTooltip(getTooltipText("clip"));
     
@@ -2871,6 +2961,7 @@ void JCBMaximizerAudioProcessorEditor::updateAllTooltips()
     // rightTopControls.reactSlider.setTooltip(getTooltipText("react"));
     // MAXIMIZER: z_SMOOTH no existe - comentado según CONTEXTO.txt
     // rightTopControls.smoothSlider.setTooltip(getTooltipText("smooth"));
+    rightTopControls.detSlider.setTooltip(getTooltipText("detect"));  // NUEVO - tooltip para DET slider
     
     // Perillas - inferiores derechas
     rightBottomKnobs.atkSlider.setTooltip(getTooltipText("attack"));
@@ -2936,7 +3027,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     if (currentLanguage == TooltipLanguage::Spanish)
     {
         // Spanish tooltips
-        if (key == "title") return JUCE_UTF8("JCBExpander: expansor de audio v0.9.1 beta\nPlugin de audio open source\nClick para créditos");
+        if (key == "title") return JUCE_UTF8("JCBExpander: expansor de audio v0.9.0 beta\nPlugin de audio open source\nClick para créditos");
         if (key == "thd") return JUCE_UTF8("THRESHOLD: nivel donde comienza la expansión\nSeñales bajo este nivel se expanden\nRango: -60 a 0 dB | Por defecto: -18 dB");
         //if (key == "ratio") return JUCE_UTF8("RATIO: cantidad de expansión aplicada\nRelación entrada/salida bajo el threshold\nRango: 1:1 a 40:1 | Por defecto: 4:1");
         //if (key == "knee") return JUCE_UTF8("KNEE: suavidad de la transición en el threshold\nCrea una curva gradual en vez de ángulo duro\nRango: 1 a 20 dB | Por defecto: 1 dB");
@@ -2945,6 +3036,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
         //if (key == "clip") return JUCE_UTF8("SOFT CLIP: limitador suave de salida\nPreviene saturación con distorsión armónica\nRango: 0/OFF a 1 | Por defecto: 0/OFF");
         //if (key == "react") return JUCE_UTF8("REACT: respuesta del detector a transientes.\nValores bajos: agresivo | Valores altos: suave.\nRango: 0 a 1 | Por defecto: 0");
         if (key == "attack") return JUCE_UTF8("ATTACK: tiempo para alcanzar máxima expansión\nVelocidad de respuesta del expansor\nRango: 0.1 a 250 ms | Por defecto: 1 ms");
+        if (key == "detect") return JUCE_UTF8("DET: modo de detección del limitador\n0.0 = Peak (rápido) | 1.0 = RMS (suave)\nValores intermedios mezclan ambos modos\nPor defecto: 0.0 (Peak)");
         if (key == "release") return JUCE_UTF8("RELEASE: tiempo para volver sin expansión\nPermite valores extremos para efectos creativos\nRango: 0.1 a 1000 ms | Por defecto: 120 ms");
         //if (key == "hold") return JUCE_UTF8("HOLD: tiempo de retención antes del release\nMantiene la expansión por un período fijo\nRango: 0 a 500 ms | Por defecto: 0 ms");
         //if (key == "range") return JUCE_UTF8("RANGE: límite inferior de expansión\nNivel máximo de reducción de ganancia\nRango: -100 a 0 dB | Por defecto: -20 dB");
@@ -2980,7 +3072,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     else
     {
         // English tooltips
-        if (key == "title") return "JCBExpander: audio expander v0.9.1 beta\nOpen source audio plugin\nClick for credits";
+        if (key == "title") return "JCBExpander: audio expander v0.9.0 beta\nOpen source audio plugin\nClick for credits";
         //if (key == "thd") return "THRESHOLD: level where expansion begins\nSignals below this level are expanded\nRange: -60 to 0 dB | Default: -18 dB";
         //if (key == "ratio") return "RATIO: amount of expansion applied\nInput/output relationship below threshold\nRange: 1:1 to 40:1 | Default: 4:1";
         //if (key == "knee") return "KNEE: smoothness of the threshold transition\nCreates a gradual curve instead of hard angle\nRange: 1 to 10 dB | Default: 1 dB";
@@ -2989,6 +3081,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
         //if (key == "clip") return "SOFT CLIP: soft output limiter\nPrevents clipping with harmonic distortion\nRange: 0/OFF to 1 | Default: 0/OFF";
         //if (key == "react") return "REACT: detector response to transients.\nLow values: aggressive | High values: smooth.\nRange: 0 to 1 | Default: 0";
         if (key == "attack") return "ATTACK: time to reach maximum expansion\nExpander response speed\nRange: 0.1 to 250 ms | Default: 1 ms";
+        if (key == "detect") return "DET: limiter detection mode\n0.0 = Peak (fast) | 1.0 = RMS (smooth)\nIntermediate values blend both modes\nDefault: 0.0 (Peak)";
         if (key == "release") return "RELEASE: time to return unexpanded\nAllows extreme values for creative effects\nRange: 0.1 to 1000 ms | Default: 120 ms";
         //if (key == "hold") return "HOLD: retention time before release\nMaintains expansion for a fixed period\nRange: 0 to 500 ms | Default: 0 ms";
         //if (key == "range") return "RANGE: lower limit of expansion\nMaximum level of gain reduction\nRange: -100 to 0 dB | Default: -20 dB";
@@ -3037,12 +3130,15 @@ void JCBMaximizerAudioProcessorEditor::applyAlphaToMainControls(float alpha)
     // MAXIMIZER: c_RATIO y q_KNEE no existen - eliminados según CONTEXTO.txt
     
     // MAXIMIZER: o_DRYWET y u_SOFTCLIP no existen - eliminados según CONTEXTO.txt
-    leftBottomKnobs.lookaheadSlider.setAlpha(alpha);
+    rightTopControls.lookaheadSlider.setAlpha(alpha);
+    leftBottomKnobs.ditherButton.setAlpha(alpha);  // NUEVO - alpha para DITHER button
     
     // MAXIMIZER: h_RANGE, g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
+    rightTopControls.detSlider.setAlpha(alpha);  // NUEVO - alpha para DET knob
     
     rightBottomKnobs.atkSlider.setAlpha(alpha);
     rightBottomKnobs.relSlider.setAlpha(alpha);
+    rightBottomKnobs.autorelButton.setAlpha(alpha);  // NUEVO - alpha para AUTOREL button
     // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
     // speedButton removed
     
@@ -3292,6 +3388,7 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     
     // Perillas Superiores Izquierdas (threshold, ratio, knee)
     if (&control == &leftTopKnobs.thdSlider) parameterID = "a_THD";
+    else if (&control == &leftTopKnobs.ceilingSlider) parameterID = "b_CELLING";  // NUEVO - ceiling slider
     // MAXIMIZER: c_RATIO no existe - comentado según CONTEXTO.txt
     // else if (&control == &leftTopKnobs.ratioSlider) parameterID = "c_RATIO";
     // MAXIMIZER: q_KNEE no existe - comentado según CONTEXTO.txt
@@ -3300,7 +3397,7 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     // Perillas Inferiores Izquierdas (drywet, lookahead, clip, autogain)
     // MAXIMIZER: o_DRYWET no existe - comentado según CONTEXTO.txt
     // else if (&control == &leftBottomKnobs.drywetSlider) parameterID = "o_DRYWET";
-    else if (&control == &leftBottomKnobs.lookaheadSlider) parameterID = "n_LOOKAHEAD";
+    else if (&control == &rightTopControls.lookaheadSlider) parameterID = "n_LOOKAHEAD";
     // MAXIMIZER: u_SOFTCLIP no existe - comentado según CONTEXTO.txt
     // else if (&control == &leftBottomKnobs.clipSlider) parameterID = "u_SOFTCLIP";  // Corregido: ahora usa mapeo dinámico
     
@@ -3311,6 +3408,7 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     // else if (&control == &rightTopControls.reactSlider) parameterID = "g_REACT";
     // MAXIMIZER: z_SMOOTH no existe - comentado según CONTEXTO.txt
     // else if (&control == &rightTopControls.smoothSlider) parameterID = "z_SMOOTH";
+    else if (&control == &rightTopControls.detSlider) parameterID = "l_DETECT";  // NUEVO - detection slider
     
     // Perillas Inferiores Derechas (attack, release, hold)
     else if (&control == &rightBottomKnobs.atkSlider) parameterID = "d_ATK";
@@ -3338,6 +3436,8 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     // Estos son parámetros globales/utility que no deberían mostrar carriles de automatización
     // MAXIMIZER: soloScButton comentado (no existe)
     // else if (&control == &sidechainControls.soloScButton) return -1;  // m_SOLOSC (no automatizable)
+    else if (&control == &leftBottomKnobs.ditherButton) return -1;      // g_DITHER (no automatizable)
+    else if (&control == &rightBottomKnobs.autorelButton) return -1;    // m_AUTOREL (no automatizable)
     else if (&control == &parameterButtons.deltaButton) return -1;      // k_DELTA (no automatizable)
     else if (&control == &parameterButtons.bypassButton) return -1;     // h_BYPASS (no automatizable)
     
@@ -3358,4 +3458,31 @@ void JCBMaximizerAudioProcessorEditor::applyMeterDecayIfNeeded()
     
     // Los medidores decaen naturalmente por inactividad
     // Los repaints se manejan automáticamente por el timer normal del editor
+}
+
+void JCBMaximizerAudioProcessorEditor::updateARButtonText()
+{
+    // MAXIMIZER: Esta función ya no es necesaria - se puede dejar vacía para compatibilidad
+    // En el original ExpansorGate manejaba el texto dinámico AR OFF/AR ON
+    // El Maximizer tiene AUTOREL como botón toggle separado
+}
+
+void JCBMaximizerAudioProcessorEditor::updateRelSliderAlpha()
+{
+    // Verificar si AUTOREL está activo
+    if (auto* param = processor.apvts.getRawParameterValue("m_AUTOREL"))
+    {
+        bool autorelActive = param->load() >= 0.5f;
+        
+        if (autorelActive)
+        {
+            // AUTOREL activo - reducir alpha del REL slider para indicar que está siendo controlado automáticamente
+            rightBottomKnobs.relSlider.setAlpha(0.4f);
+        }
+        else
+        {
+            // AUTOREL inactivo - alpha normal para REL slider
+            rightBottomKnobs.relSlider.setAlpha(1.0f);
+        }
+    }
 }
