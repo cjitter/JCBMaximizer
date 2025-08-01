@@ -1,0 +1,103 @@
+# Contexto del Proyecto: Migración JCBMaximizer
+
+## Resumen
+Estoy migrando un plugin de audio (JCBMaximizer) que fue desarrollado originalmente con Max/Gen~ y exportado a C++ usando JUCE. El objetivo es adaptar la estructura de JCBExpander (proyecto hermano ya funcional) para crear JCBMaximizer, manteniendo toda la infraestructura pero con los parámetros y DSP específicos del maximizer.
+
+## Tecnologías
+- **Motor DSP**: Gen~ (Max) exportado a C++
+- **Framework**: JUCE 8.0.8
+- **Build System**: CMake
+- **Plataforma**: macOS (Universal Binary)
+- **Formatos**: VST3, AU, AAX
+
+## Estructura del Proyecto
+```
+JCBMaximizer/
+├── CMakeLists.txt (ya adaptado)
+├── exported-code/
+│   ├── gen_dsp/
+│   │   ├── genlib.cpp
+│   │   ├── json.c
+│   │   └── json_builder.c
+│   └── JCBMaximizer.cpp (a generar desde Gen~)
+├── Source/
+│   ├── Components/
+│   │   ├── UI/
+│   │   └── Windows/
+│   ├── Helpers/
+│   ├── PluginEditor.cpp
+│   ├── PluginEditor.h
+│   ├── PluginProcessor.cpp (a adaptar)
+│   └── PluginProcessor.h (a adaptar)
+└── Assets/
+```
+
+## Parámetros del JCBMaximizer (desde GenExpr)
+
+### Parámetros de Control Principal
+- **a_THD**: Threshold (-20 a 0 dB, default: 0)
+- **b_CELLING**: Ceiling/Techo máximo (-60 a 0 dB, default: 0)
+- **d_ATK**: Attack (0.01 a 500 ms, default: 1)
+- **e_REL**: Release (1 a 1500 ms, default: 50)
+
+### Parámetros de Procesamiento
+- **j_TRIM**: Input trim gain (-12 a 12 dB, default: 0)
+- **g_DITHER**: Dither amount (0 a 1, default: 0)
+- **h_BYPASS**: Bypass (0 a 1, default: 0)
+- **k_DELTA**: Delta mode (0 a 1, default: 0)
+- **l_DETECT**: Detection mode Peak/RMS (0 a 1, default: 0)
+- **m_AUTOREL**: Auto-release (0 a 1, default: 0)
+- **n_LOOKAHEAD**: Lookahead (0 a 5 ms, default: 2)
+
+### Diferencias con JCBExpander
+El Maximizer NO tiene estos parámetros del Expander:
+- c_RATIO (el maximizer tiene ratio infinito implícito)
+- f_HOLD
+- g_REACT
+- h_RANGE
+- q_KNEE
+- i_MAKEUP
+- Filtros HPF/LPF y sus órdenes
+- l_SC (sidechain filters)
+- m_SOLOSC
+- o_DRYWET
+- r_KEY (external key)
+- u_SOFTCLIP
+- y_SCTRIM
+- z_SMOOTH
+
+## Tareas Principales
+
+### 1. Exportación Gen~ a C++
+- Usar el código GenExpr proporcionado para generar `JCBMaximizer.cpp`
+- El archivo debe ir en `exported-code/JCBMaximizer.cpp`
+
+### 2. Adaptar PluginProcessor
+Partiendo de `PluginProcessor.cpp` del Expander:
+- Cambiar todas las referencias de `JCBExpander` a `JCBMaximizer`
+- Actualizar `createParameterLayout()` con los parámetros del maximizer
+- Remover código relacionado con parámetros que no existen en el maximizer
+- Mantener la estructura de medidores y visualización
+
+### 3. Consideraciones Especiales
+- El maximizer usa soft knee limiting con transición suave
+- Tiene detección RMS con ventana deslizante de 3ms
+- Auto-release detecta transientes y ajusta dinámicamente
+- El lookahead está activo por defecto (2ms)
+
+## Notas sobre el DSP
+El maximizer implementa:
+- Función `softkneeLimiter()` para limitación suave
+- Detección híbrida Peak/RMS interpolable
+- Auto-release adaptativo basado en detección de transientes
+- Dithering opcional para la salida
+- Modo Delta para escuchar la diferencia entre entrada y salida
+
+## Objetivo Final
+Tener un plugin JCBMaximizer totalmente funcional que:
+1. Use la misma infraestructura UI/UX que JCBExpander
+2. Implemente correctamente todos los parámetros del maximizer
+3. Mantenga compatibilidad con VST3/AU/AAX
+4. Funcione correctamente con la exportación Gen~
+
+¿Por dónde empezamos? Sugiero primero generar el archivo `JCBMaximizer.cpp` desde el código Gen~ y luego adaptar el PluginProcessor.

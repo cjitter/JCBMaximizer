@@ -1,25 +1,60 @@
-/*******************************************************************************************************************
-Cycling '74 License for Max-Generated Code for Export
-Copyright (c) 2016 Cycling '74
-The code that Max generates automatically and that end users are capable of exporting and using, and any
-  associated documentation files (the “Software”) is a work of authorship for which Cycling '74 is the author
-  and owner for copyright purposes.  A license is hereby granted, free of charge, to any person obtaining a
-  copy of the Software (“Licensee”) to use, copy, modify, merge, publish, and distribute copies of the Software,
-  and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-The Software is licensed to Licensee only for non-commercial use. Users who wish to make commercial use of the
-  Software must contact the copyright owner to determine if a license for commercial use is available, and the
-  terms and conditions for same, which may include fees or royalties. For commercial use, please send inquiries
-  to licensing@cycling74.com.  The determination of whether a use is commercial use or non-commercial use is based
-  upon the use, not the user. The Software may be used by individuals, institutions, governments, corporations, or
-  other business whether for-profit or non-profit so long as the use itself is not a commercialization of the
-  materials or a use that generates or is intended to generate income, revenue, sales or profit.
-The above copyright notice and this license shall be included in all copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-  THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
-  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
-  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-  DEALINGS IN THE SOFTWARE.
-*******************************************************************************************************************/
+/****************************************************************************************
+Copyright (c) 2023 Cycling '74
+
+The code that Max generates automatically and that end users are capable of
+exporting and using, and any associated documentation files (the “Software”)
+is a work of authorship for which Cycling '74 is the author and owner for
+copyright purposes.
+
+This Software is dual-licensed either under the terms of the Cycling '74
+License for Max-Generated Code for Export, or alternatively under the terms
+of the General Public License (GPL) Version 3. You may use the Software
+according to either of these licenses as it is most appropriate for your
+project on a case-by-case basis (proprietary or not).
+
+A) Cycling '74 License for Max-Generated Code for Export
+
+A license is hereby granted, free of charge, to any person obtaining a copy
+of the Software (“Licensee”) to use, copy, modify, merge, publish, and
+distribute copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
+
+The Software is licensed to Licensee for all uses that do not include the sale,
+sublicensing, or commercial distribution of software that incorporates this
+source code. This means that the Licensee is free to use this software for
+educational, research, and prototyping purposes, to create musical or other
+creative works with software that incorporates this source code, or any other
+use that does not constitute selling software that makes use of this source
+code. Commercial distribution also includes the packaging of free software with
+other paid software, hardware, or software-provided commercial services.
+
+For entities with UNDER $200k in annual revenue or funding, a license is hereby
+granted, free of charge, for the sale, sublicensing, or commercial distribution
+of software that incorporates this source code, for as long as the entity's
+annual revenue remains below $200k annual revenue or funding.
+
+For entities with OVER $200k in annual revenue or funding interested in the
+sale, sublicensing, or commercial distribution of software that incorporates
+this source code, please send inquiries to licensing (at) cycling74.com.
+
+The above copyright notice and this license shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Please see
+https://support.cycling74.com/hc/en-us/articles/360050779193-Gen-Code-Export-Licensing-FAQ
+for additional information
+
+B) General Public License Version 3 (GPLv3)
+Details of the GPLv3 license can be found at: https://www.gnu.org/licenses/gpl-3.0.html
+****************************************************************************************/
 
 #ifndef GENLIB_OPS_H
 #define GENLIB_OPS_H 1
@@ -115,7 +150,7 @@ inline t_sample safemod(t_sample f, t_sample m) {
 		if (f>=m) {
 			if (f>=(m*2.)) {
 				t_sample d = f / m;
-				d = d - (long) d;
+				d = d - (int64_t) d;
 				f = d * m;
 			}
 			else {
@@ -125,7 +160,7 @@ inline t_sample safemod(t_sample f, t_sample m) {
 		else if (f<=(-m)) {
 			if (f<=(-m*2.)) {
 				t_sample d = f / m;
-				d = d - (long) d;
+				d = d - (int64_t) d;
 				f = d * m;
 			}
 			 else {
@@ -194,14 +229,14 @@ inline t_sample fold(t_sample v, t_sample lo1, t_sample hi1){
 	if(v >= hi){
 		v -= range;
 		if(v >= hi){
-			numWraps = (long)((v - lo)/range);
+			numWraps = (int64_t)((v - lo)/range);
 			v -= range * (t_sample)numWraps;
 		}
 		numWraps++;
 	} else if(v < lo){
 		v += range;
 		if(v < lo){
-			numWraps = (long)((v - lo)/range) - 1;
+			numWraps = (int64_t)((v - lo)/range) - 1;
 			v -= range * (t_sample)numWraps;
 		}
 		numWraps--;
@@ -222,7 +257,7 @@ inline t_sample wrap(t_sample v, t_sample lo1, t_sample hi1){
 	const t_sample range = hi - lo;
 	if (v >= lo && v < hi) return v;
 	if (range <= 0.000000001) return lo;	// no point...
-	const long numWraps = long((v-lo)/range) - (v < lo);
+	const int64_t numWraps = int64_t((v-lo)/range) - (v < lo);
 	const t_sample result = v - range * t_sample(numWraps);
 	if (result >= hi) return result - range;
 	else return result;
@@ -1454,7 +1489,7 @@ struct DataLocal : public DataInterface<t_sample> {
 			genlib_report_message("warning: resizing data to < 256MB");
 		}
 		if (mData) {
-			sysmem_resizeptr(mData, sizeof(t_sample) * s * c);
+			mData = (t_sample *)sysmem_resizeptr(mData, sizeof(t_sample) * s * c);
 		} else {
 			mData = (t_sample *)sysmem_newptr(sizeof(t_sample) * s * c);
 		}

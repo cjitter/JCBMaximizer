@@ -1,4 +1,30 @@
 **/.DS_Store
+tools/
+Max/GenExpr.txt
+zOld/
+
+# Carpetas de build
+build/
+cmake-build-*/
+build-xcode/
+
+# Archivos temporales de testing
+pluginval_temp/
+pluginval_logs/
+Testing/
+
+# Archivos CLion
+.idea/
+CLAUDE.md
+
+# Scripts manuales de compilación final plugins mediante xcode toolchain
+build-xcode-aax-release.sh
+build-xcode-vst3-au-release.sh
+build-xcode-au_script.sh
+build-xcode-vst3_script.sh
+
+# Oldies
+**/.DS_Store
 **/Assets
 **/JuceLibraryCode
 **/Builds/MacOSX/build/Debug

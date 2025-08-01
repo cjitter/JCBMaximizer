@@ -28,12 +28,12 @@ use that does not constitute selling software that makes use of this source
 code. Commercial distribution also includes the packaging of free software with
 other paid software, hardware, or software-provided commercial services.
 
-For entities with UNDER $200k in annual revenue or funding, a license is hereby
+For entities with UNDER 200k USD in annual revenue or funding, a license is hereby
 granted, free of charge, for the sale, sublicensing, or commercial distribution
 of software that incorporates this source code, for as long as the entity's
-annual revenue remains below $200k annual revenue or funding.
+annual revenue remains below 200k USD annual revenue or funding.
 
-For entities with OVER $200k in annual revenue or funding interested in the
+For entities with OVER 200k USD in annual revenue or funding interested in the
 sale, sublicensing, or commercial distribution of software that incorporates
 this source code, please send inquiries to licensing (at) cycling74.com.
 
@@ -57,97 +57,28 @@ Details of the GPLv3 license can be found at: https://www.gnu.org/licenses/gpl-3
 ****************************************************************************************/
 
 
-#ifndef GENLIB_COMMON_H
-#define GENLIB_COMMON_H 1
+#include "genlib.h"
+#include "genlib_exportfunctions.h"
+#include "genlib_ops.h"
 
-#include "genlib_platform.h"
+namespace JCBMaximizer {
 
-//////////// genlib_common.h ////////////
-// common data structure header file -- this is the stuff required by the
-// common code and accessed by the export and max code
+int num_inputs();
+int num_outputs();
+int num_params();
+int perform(CommonState *cself, t_sample **ins, long numins, t_sample **outs, long numouts, long n);
+void reset(CommonState *cself);
+void setparameter(CommonState *cself, long index, t_param value, void *ref);
+void getparameter(CommonState *cself, long index, t_param *value);
+const char *getparametername(CommonState *cself, long index);
+t_param getparametermin(CommonState *cself, long index);
+t_param getparametermax(CommonState *cself, long index);
+char getparameterhasminmax(CommonState *cself, long index);
+const char *getparameterunits(CommonState *cself, long index);
+size_t getstatesize(CommonState *cself);
+short getstate(CommonState *cself, char *state);
+short setstate(CommonState *cself, const char *state);
+void *create(t_param sr, long vs);
+void destroy(CommonState *cself);
 
-#define DSP_GEN_MAX_SIGNALS 128
-
-#ifdef GENLIB_USE_FLOAT32
-typedef float t_sample;
-typedef float t_param;
-#else
-typedef double t_sample;
-typedef double t_param;
-#endif
-typedef char *t_ptr;
-
-typedef long t_genlib_err;
-typedef enum {
-	GENLIB_ERR_NONE =			0,	///< No error
-	GENLIB_ERR_GENERIC =		-1,	///< Generic error
-	GENLIB_ERR_INVALID_PTR =	-2,	///< Invalid Pointer
-	GENLIB_ERR_DUPLICATE =		-3,	///< Duplicate
-	GENLIB_ERR_OUT_OF_MEM =		-4,	///< Out of memory
-
-	GENLIB_ERR_LOOP_OVERFLOW =  100,	// too many iterations of loops in perform()
-	GENLIB_ERR_NULL_BUFFER =	101	// missing signal data in perform()
-
-} e_genlib_errorcodes;
-
-typedef enum {
-	GENLIB_PARAMTYPE_FLOAT	=	0,
-	GENLIB_PARAMTYPE_SYM	= 	1
-} e_genlib_paramtypes;
-
-struct ParamInfo
-{
-	t_param defaultvalue;
-	void *defaultref;
-	char hasinputminmax;
-	char hasminmax;
-	t_param inputmin, inputmax;
-	t_param outputmin, outputmax;
-	const char *name;
-	const char *units;
-	int paramtype;		// 0 -> float64, 1 -> symbol (table name)
-	t_param exp;			// future, for scaling
-};
-
-struct CommonState
-{
-	t_sample sr;
-	int vs;
-	int numins;
-	int numouts;
-	const char **inputnames;
-	const char **outputnames;
-	int numparams;
-	ParamInfo *params;
-
-	void *parammap;	// implementation-dependent
-	void *api;			// implementation-dependent
-};
-
-// opaque interface to float32 buffer:
-typedef struct _genlib_buffer t_genlib_buffer;
-typedef struct {
-	char b_name[256];	///< name of the buffer
-	float *b_samples;	///< stored with interleaved channels if multi-channel
-	long b_frames;		///< number of sample frames (each one is sizeof(float) * b_nchans bytes)
-	long b_nchans;		///< number of channels
-	long b_size;		///< size of buffer in floats
-	float b_sr;			///< sampling rate of the buffer
-	long b_modtime;		///< last modified time ("dirty" method)
-	long b_rfu[57];		///< reserved for future use
-} t_genlib_buffer_info;
-
-// opaque interface to float64 buffer:
-typedef struct _genlib_data t_genlib_data;
-typedef struct {
-	int					dim, channels;
-	t_sample *			data;
-} t_genlib_data_info;
-
-typedef void (*setparameter_method) (CommonState *, long, t_param, void *);
-typedef void (*getparameter_method) (CommonState *, long, t_param *);
-
-#endif // GENLIB_COMMON_H
-
-
-
+} // JCBMaximizer::
