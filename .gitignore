@@ -1,32 +1,32 @@
+# Archivos del sistema
 **/.DS_Store
-tools/
-Max/GenExpr.txt
-zOld/
 
-# Carpetas de build
+# Carpetas de trabajo local
 build/
-cmake-build-*/
 build-xcode/
-
-# Archivos temporales de testing
+cmake-build-*/
+.idea/
+Testing/
 pluginval_temp/
 pluginval_logs/
-Testing/
 
-# Archivos CLion
-.idea/
-CLAUDE.md
+# Carpetas y archivos antiguos o temporales
+zOld/
+**/zVar
+**/Assets
+**/JuceLibraryCode
+**/Builds/MacOSX/build/Debug
+**/Builds/MacOSX/build/Release
 
-# Scripts manuales de compilación final plugins mediante xcode toolchain
+# Archivos de patches y herramientas manuales
+Max/GenExpr.txt
+tools/
+
+# Scripts manuales de compilación final
 build-xcode-aax-release.sh
 build-xcode-vst3-au-release.sh
 build-xcode-au_script.sh
 build-xcode-vst3_script.sh
 
-# Oldies
-**/.DS_Store
-**/Assets
-**/JuceLibraryCode
-**/Builds/MacOSX/build/Debug
-**/Builds/MacOSX/build/Release
-**/zVar
+# Documentos que no se quieren versionar
+CLAUDE.md
