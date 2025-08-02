@@ -16,6 +16,7 @@ zOld/
 **/JuceLibraryCode
 **/Builds/MacOSX/build/Debug
 **/Builds/MacOSX/build/Release
+DELTA_SYNC_SOLUTION.md
 
 # Archivos de patches y herramientas manuales
 Max/GenExpr.txt
