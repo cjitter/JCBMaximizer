@@ -120,10 +120,7 @@ Los tests validan los formatos VST3 y AU del plugin.
 
 - Migrar de Plugin Export a la exportación C++ de RNBO.
 - Implementar oversampling con el módulo DSP de JUCE.
-- Implementar soft knee ajustable con transición suave.
-- Implementar sidechain externo.
 - Implementar mapeo MIDI.
-- Mejorar sistema de visualización con curva de transferencia y espectro.
 - Portar a SuperCollider los bloques de GenExpr, y/o crear UGen.
 - Hacer el Max For Live device.
 
