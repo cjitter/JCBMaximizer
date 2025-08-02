@@ -124,8 +124,6 @@ juce_add_binary_data(JCBMaximizer_BinaryData
         Assets/delta.png
         Assets/diagramaFondo.png
         Assets/diagram.png
-        Assets/hpfOff.png
-        Assets/lpfOff.png
         # Code files
         Assets/code/InputTrim.txt
         Assets/code/GainCore.txt

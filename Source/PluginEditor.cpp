@@ -2022,10 +2022,7 @@ void JCBMaximizerAudioProcessorEditor::setupBackground()
     deltaBackground = juce::ImageCache::getFromMemory(BinaryData::delta_png, BinaryData::delta_pngSize);
     diagramBackground = juce::ImageCache::getFromMemory(BinaryData::diagramaFondo_png, BinaryData::diagramaFondo_pngSize);
     
-    // MAXIMIZER: No filter icons - commenting out image loading
-    // Cargar iconos de filtro (solo usando imágenes de estado OFF)
-    // hpfOffImage = juce::ImageCache::getFromMemory(BinaryData::hpfOff_png, BinaryData::hpfOff_pngSize);
-    // lpfOffImage = juce::ImageCache::getFromMemory(BinaryData::lpfOff_png, BinaryData::lpfOff_pngSize);
+    // MAXIMIZER: No filter icons - removed hpfOff.png and lpfOff.png assets
     
     // Establecer background inicial
     if (normalBackground.isValid())
@@ -2035,21 +2032,7 @@ void JCBMaximizerAudioProcessorEditor::setupBackground()
         backgroundImage.toBack();
     }
     
-    // MAXIMIZER: No filter icons - commenting out icon setup
-    /*
-    // Configurar iconos de filtro - comenzar con estado OFF
-    if (hpfOffImage.isValid())
-    {
-        hpfIcon.setImage(hpfOffImage, juce::RectanglePlacement::centred);
-        addAndMakeVisible(hpfIcon);
-    }
-    
-    if (lpfOffImage.isValid())
-    {
-        lpfIcon.setImage(lpfOffImage, juce::RectanglePlacement::centred);
-        addAndMakeVisible(lpfIcon);
-    }
-    */
+    // MAXIMIZER: No filter icons - removed icon setup code
 }
 
 //==============================================================================
@@ -2101,19 +2084,11 @@ void JCBMaximizerAudioProcessorEditor::updateSidechainComponentStates()
     sidechainControls.hpfOrderButton.setEnabled(true);
     sidechainControls.lpfOrderButton.setEnabled(true);
     
-    // Iconos siempre muestran imágenes blancas/OFF - no cambio dinámico basado en estado FILTERS
-    if (hpfOffImage.isValid())
-        hpfIcon.setImage(hpfOffImage, juce::RectanglePlacement::centred);
-    if (lpfOffImage.isValid())
-        lpfIcon.setImage(lpfOffImage, juce::RectanglePlacement::centred);
-    
-    // Forzar repaint para actualizar colores e iconos
+    // Forzar repaint para actualizar colores
     sidechainControls.hpfSlider.repaint();
     sidechainControls.lpfSlider.repaint();
     sidechainControls.hpfOrderButton.repaint();
     sidechainControls.lpfOrderButton.repaint();
-    hpfIcon.repaint();
-    lpfIcon.repaint();
     
     // Los sliders de sidechain trim según EXT KEY
     const bool extKeyActive = sidechainControls.keyButton.getToggleState();
