@@ -28,24 +28,26 @@ softkneeLimiter(xg, threshold, kneeWidth) {
 // ====================================
 // DECLARACIÓN DE PARÁMETROS
 // ====================================
-Param d_ATK(0, min=0.01, default=1, max=500);      // Tiempo de ataque en ms
-Param b_CELLING(0, min=-60, default=0, max=0);     // Techo máximo en dB
-Param a_THD(0, min=-20, default=0, max=0);         // Umbral de limitación en dB
-Param e_REL(0, min=1, default=50, max=1500);       // Tiempo de release en ms
+Param d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms
+Param b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB
+Param a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB) - moderno
+Param e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms
 Param g_DITHER(0, min=0, default=0, max=1);        // Cantidad de dither (0-1)
 Param h_BYPASS(0, min=0, default=0, max=1);        // Bypass del efecto (0-1)
+Param i_MAKEUP(0, min=-12, default=0, max=12);     // Makeup gain post-proceso (dB)
 Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)
 Param k_DELTA(0, min=0, default=0, max=1);         // Delta mode (0-1)
 Param l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)
 Param m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)
-Param n_LOOKAHEAD(0, min=0, default=2, max=5);     // Lookahead time (ms)
+Param n_LOOKAHEAD(0, min=0, default=0, max=5);     // Lookahead time (ms)
 
 // ====================================
 // VARIABLES DE ESTADO (HISTORIALES)
 // ====================================
-History smoothedThreshold(0);    // Suavizado del umbral
+History smoothedGain(0);         // Suavizado del gain (antes threshold)
 History smoothedCeiling(0);      // Suavizado del techo
 History smoothedBypass(0);       // Suavizado del bypass
+History smoothedMakeup(0);       // Suavizado del makeup gain
 History envelopeFollower(0);     // Seguidor de envolvente para detección RMS
 History gainReduction(0);        // Reducción de ganancia actual
 History lookaheadHistory(0);     // Para suavizado del lookahead
@@ -60,11 +62,13 @@ History rmsSum(0);               // Suma para RMS sliding window
 // ====================================
 // LÍNEAS DE DELAY PARA LOOKAHEAD
 // ====================================
-Delay delayLeft(samplerate);     // Delay canal izquierdo
-Delay delayRight(samplerate);    // Delay canal derecho
+Delay delayLeft(samplerate);        // Delay canal izquierdo (con trim)
+Delay delayRight(samplerate);       // Delay canal derecho (con trim)
 Delay delayDetectLeft(samplerate);  // Delay detección izquierda
 Delay delayDetectRight(samplerate); // Delay detección derecha
-Delay rmsDelay(500);                 // Buffer para RMS sliding window (500 samples ~10ms @ 48kHz)
+Delay leftInputDelay(samplerate);   // Delay canal izquierdo (sin trim para bypass)
+Delay rightInputDelay(samplerate);  // Delay canal derecho (sin trim para bypass)
+Delay rmsDelay(500);                // Buffer para RMS sliding window (500 samples ~10ms @ 48kHz)
 
 // ====================================
 // CONSTANTES GLOBALES
@@ -84,11 +88,11 @@ trimHistory = fixdenorm(smoothedTrim);
 trimLinear = dbtoa(smoothedTrim);
 
 // Suavizado del threshold con factor 0.999
-smoothedThreshold = smoothedThreshold * 0.999 + a_THD * 0.001;
-smoothedThreshold = fixdenorm(smoothedThreshold);
+smoothedGain = smoothedGain * 0.999 + (-a_GAIN) * 0.001;
+smoothedGain = fixdenorm(smoothedGain);
 
 // Conversión de threshold a factor lineal
-thresholdLinear = 1 / pow(10, smoothedThreshold / 20);
+thresholdLinear = 1 / pow(10, smoothedGain / 20);
 
 // Suavizado del ceiling
 smoothedCeiling = smoothedCeiling * 0.999 + b_CELLING * 0.001;
@@ -98,6 +102,11 @@ smoothedCeiling = fixdenorm(smoothedCeiling);
 smoothedBypass = smoothedBypass * 0.999 + h_BYPASS * 0.001;
 smoothedBypass = fixdenorm(smoothedBypass);
 wetAmount = 1 - smoothedBypass;  // Cantidad de señal procesada
+
+// Suavizado del makeup gain
+smoothedMakeup = smoothedMakeup * 0.999 + i_MAKEUP * 0.001;
+smoothedMakeup = fixdenorm(smoothedMakeup);
+makeupLinear = dbtoa(smoothedMakeup);
 
 // Suavizado del modo delta
 smoothedDelta = deltaHistory * 0.999 + k_DELTA * 0.001;
@@ -231,17 +240,25 @@ delayedRight = delayRight.read(lookaheadSamples);
 delayedDetectLeft = delayDetectLeft.read(lookaheadSamples);
 delayedDetectRight = delayDetectRight.read(lookaheadSamples);
 
+// Leer señales originales sin trim para bypass verdadero
+delayedLeftOriginal = leftInputDelay.read(lookaheadSamples);
+delayedRightOriginal = rightInputDelay.read(lookaheadSamples);
+
 // ====================================
 // GANANCIA DE COMPENSACIÓN (UNITY/MAKEUP)
 // ====================================
-// Conversión de threshold a ganancia lineal para makeup
-makeupGainLinear = dbtoa(smoothedThreshold);
+// Nota: Esta línea ya no se usa, makeupLinear se calcula arriba
+// makeupGainLinear = dbtoa(smoothedThreshold);
 
 // ====================================
 // GENERACIÓN DE DITHER
 // ====================================
-ditherNoise = noise() * ditherAmount;
-ditherGated = gate(g_DITHER, ditherNoise);
+// TPDF (Triangular Probability Density Function) dither
+// Suma de dos ruidos blancos para distribución triangular
+noise1 = noise() * ditherAmount * 0.5;
+noise2 = noise() * ditherAmount * 0.5;
+ditherTPDF = noise1 + noise2;
+ditherGated = gate(g_DITHER, ditherTPDF);
 
 // ====================================
 // CÁLCULO DE REDUCCIÓN DE GANANCIA
@@ -251,22 +268,32 @@ gainReductionAmount = limitedDb - gainReductionDb;
 gainReductionAmount = max(gainReductionAmount, -144);  // Limitar a -144dB mínimo
 gainReductionLinear = dbtoa(gainReductionAmount);
 
+// Calcular ganancia total aplicada para normalización del delta
+totalGainApplied = trimLinear * thresholdLinear;
+
 // ====================================
 // PROCESAMIENTO CANAL IZQUIERDO
 // ====================================
 // Aplicar reducción de ganancia
 leftProcessed = delayedDetectLeft * gainReductionLinear;
 
-// Aplicar clipping y dither
-leftClipped = clamp(leftProcessed + ditherGated, ceilingNegative, ceilingPositive);
+// Aplicar clipping (SIN dither aquí)
+leftClipped = clamp(leftProcessed, ceilingNegative, ceilingPositive);
 
-// Modo delta - calcular diferencia entre señal con trim y procesada
-// IMPORTANTE: Comparar señales con el mismo scaling
-leftDelta = delayedDetectLeft - leftClipped;
-leftWithDelta = mix(leftClipped, leftDelta, smoothedDelta);
+// Aplicar makeup gain SOLO cuando NO está en modo delta
+leftWithMakeup = leftClipped * makeupLinear;
+leftFinalProcessed = mix(leftClipped, leftWithMakeup, 1 - smoothedDelta);
+
+// Modo delta - calcular diferencia normalizada por ceiling y ganancia total
+// Normalizar por ceiling y por la ganancia total aplicada (trim * threshold)
+leftDelta = (delayedDetectLeft - leftClipped) / (ceilingLinear * max(totalGainApplied, 1));
+leftWithDelta = mix(leftFinalProcessed, leftDelta, smoothedDelta);
 
 // Mezclar con señal original según bypass
-out1 = mix(delayedLeft, leftWithDelta, wetAmount);
+leftFinal = mix(delayedLeftOriginal, leftWithDelta, wetAmount);
+
+// Aplicar dither como último paso
+out1 = leftFinal + ditherGated;
 
 // ====================================
 // PROCESAMIENTO CANAL DERECHO
@@ -274,24 +301,33 @@ out1 = mix(delayedLeft, leftWithDelta, wetAmount);
 // Aplicar reducción de ganancia
 rightProcessed = delayedDetectRight * gainReductionLinear;
 
-// Aplicar clipping y dither
-rightClipped = clamp(ditherGated + rightProcessed, ceilingNegative, ceilingPositive);
+// Aplicar clipping (SIN dither aquí)
+rightClipped = clamp(rightProcessed, ceilingNegative, ceilingPositive);
 
-// Modo delta - calcular diferencia entre señal con trim y procesada
-// IMPORTANTE: Comparar señales con el mismo scaling
-rightDelta = delayedDetectRight - rightClipped;
-rightWithDelta = mix(rightClipped, rightDelta, smoothedDelta);
+// Aplicar makeup gain SOLO cuando NO está en modo delta
+rightWithMakeup = rightClipped * makeupLinear;
+rightFinalProcessed = mix(rightClipped, rightWithMakeup, 1 - smoothedDelta);
+
+// Modo delta - calcular diferencia normalizada por ceiling y ganancia total
+// Normalizar por ceiling y por la ganancia total aplicada (trim * threshold)
+rightDelta = (delayedDetectRight - rightClipped) / (ceilingLinear * max(totalGainApplied, 1));
+rightWithDelta = mix(rightFinalProcessed, rightDelta, smoothedDelta);
 
 // Mezclar con señal original según bypass
-out2 = mix(delayedRight, rightWithDelta, wetAmount);
+rightFinal = mix(delayedRightOriginal, rightWithDelta, wetAmount);
+
+// Aplicar dither como último paso
+out2 = rightFinal + ditherGated;
 
 // ====================================
 // ESCRIBIR EN BUFFERS DE DELAY
 // ====================================
 delayDetectRight.write(rightScaled);
 delayDetectLeft.write(leftScaled);
-delayRight.write(rightTrimmed);    // Escribir señal con trim
-delayLeft.write(leftTrimmed);      // Escribir señal con trim
+delayRight.write(rightTrimmed);     // Escribir señal con trim
+delayLeft.write(leftTrimmed);       // Escribir señal con trim
+rightInputDelay.write(in2);         // Escribir señal SIN trim para bypass
+leftInputDelay.write(in1);          // Escribir señal SIN trim para bypass
 
 // ====================================
 // GAIN REDUCTION OUTPUT - Medidor de reducción para UI

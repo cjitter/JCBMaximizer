@@ -17,6 +17,7 @@
 // - out3: Señal L escalada (para delta en Output)
 // - out4: Señal R escalada (para delta en Output)
 // - out5: Reducción de ganancia lineal (para medidor)
+// - out6: Ceiling linear (para normalización delta)
 // =============================================================================
 
 // FUNCIÓN SOFT KNEE LIMITER
@@ -36,22 +37,7 @@ softkneeLimiter(xg, threshold, kneeWidth) {
     return ret;
 }
 
-// PARÁMETROS
-Param g_DITHER(0, min=0, default=0, max=1);  // Cantidad de dither (0-1)
-
-// HISTORIAS
-History ditherHistory(0);
-
-// CONSTANTES
-ditherAmount = 1.5258789062e-05;
-SMOOTH_HISTORY_FACTOR = 0.999;
-SMOOTH_PARAM_FACTOR = 0.001;
-
 // PROCESAMIENTO
-// Suavizado del dither
-smoothedDither = ditherHistory * SMOOTH_HISTORY_FACTOR + g_DITHER * SMOOTH_PARAM_FACTOR;
-ditherHistory = fixdenorm(smoothedDither);
-
 // Aplicar soft knee limiter
 limitedDb = softkneeLimiter(in1, in2, 0);
 
@@ -65,17 +51,13 @@ ceilingLinear = dbtoa(in2);
 ceilingNegative = ceilingLinear * -1;
 ceilingPositive = ceilingLinear * 1;
 
-// Generar dither
-ditherNoise = noise() * ditherAmount;
-ditherGated = gate(smoothedDither, ditherNoise);
-
 // Aplicar reducción a canal izquierdo
 leftProcessed = in5 * gainReductionLinear;
-leftClipped = clamp(leftProcessed + ditherGated, ceilingNegative, ceilingPositive);
+leftClipped = clamp(leftProcessed, ceilingNegative, ceilingPositive);
 
 // Aplicar reducción a canal derecho
 rightProcessed = in6 * gainReductionLinear;
-rightClipped = clamp(ditherGated + rightProcessed, ceilingNegative, ceilingPositive);
+rightClipped = clamp(rightProcessed, ceilingNegative, ceilingPositive);
 
 // SALIDAS
 out1 = leftClipped;           // L procesada
@@ -83,3 +65,4 @@ out2 = rightClipped;          // R procesada
 out3 = in5;                   // L escalada (pass-through para delta)
 out4 = in6;                   // R escalada (pass-through para delta)
 out5 = gainReductionLinear;   // Para medidor (0-1)
+out6 = ceilingLinear;         // Para normalización delta

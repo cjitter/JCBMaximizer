@@ -67,7 +67,7 @@ public:
     // MÉTODOS DE ACTUALIZACIÓN DE PARÁMETROS
     //==========================================================================
     
-    void setThreshold(float thresholdDb);
+    void setThreshold(float gainDb);
     void setCeiling(float ceilingDb);
     void setKnee(float kneeDb);
     // MAXIMIZER: setRatio() y setRange() eliminados - no existen según CONTEXTO.txt
@@ -131,7 +131,7 @@ public:
     //==========================================================================
     
     // Callbacks para notificar cambios de parámetros
-    std::function<void(float)> onThresholdChange;
+    std::function<void(float)> onThresholdChange;  // Nota: mantener nombre por compatibilidad pero ahora es gain
     std::function<void(float)> onCeilingChange;
     std::function<void(float)> onKneeChange;
     // MAXIMIZER: onRatioChange y onRangeChange eliminados - no existen según CONTEXTO.txt
@@ -144,7 +144,7 @@ private:
     // PARÁMETROS DEL LIMITADOR/MAXIMIZER
     //==========================================================================
     
-    float threshold = 0.0f;            // Umbral por defecto en dB (a_THD)
+    float threshold = 0.0f;            // Gain por defecto en dB (a_GAIN, valores positivos)
     float ceiling = 0.0f;              // Techo máximo por defecto en dB (b_CELLING)
     float knee = 0.0f;                // Suavizado de la curva en dB
     // MAXIMIZER: ratio y range eliminados - no existen según CONTEXTO.txt

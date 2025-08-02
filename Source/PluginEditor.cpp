@@ -134,8 +134,8 @@ JCBMaximizerAudioProcessorEditor::JCBMaximizerAudioProcessorEditor (JCBMaximizer
     // MAXIMIZER: c_RATIO, q_KNEE, h_RANGE no existen - eliminados según CONTEXTO.txt
 
     // Conectar callbacks del transfer display para actualizar knobs
-    transferDisplay.onThresholdChange = [this](float newThreshold) {
-        leftTopKnobs.thdSlider.setValue(newThreshold, juce::sendNotification);
+    transferDisplay.onThresholdChange = [this](float newGain) {
+        leftTopKnobs.thdSlider.setValue(newGain, juce::sendNotification);
         handleParameterChange();  // Marcar preset como modificado
     };
     transferDisplay.onCeilingChange = [this](float newCeiling) {
@@ -149,11 +149,15 @@ JCBMaximizerAudioProcessorEditor::JCBMaximizerAudioProcessorEditor (JCBMaximizer
     
     // Crear y registrar parameter listener para updates de automatización
     transferFunctionListener = std::make_unique<TransferFunctionParameterListener>(this);
-    processor.apvts.addParameterListener("a_THD", transferFunctionListener.get());
+    processor.apvts.addParameterListener("a_GAIN", transferFunctionListener.get());
     processor.apvts.addParameterListener("b_CELLING", transferFunctionListener.get());
     // MAXIMIZER: c_RATIO y q_KNEE no existen - comentado según CONTEXTO.txt
     // processor.apvts.addParameterListener("c_RATIO", transferFunctionListener.get());
     // processor.apvts.addParameterListener("q_KNEE", transferFunctionListener.get());
+    
+    // Crear y registrar parameter listener para alpha del REL slider
+    autorelParameterListener = std::make_unique<AutorelParameterListener>(this);
+    processor.apvts.addParameterListener("m_AUTOREL", autorelParameterListener.get());
     
     // Configurar estado inicial del idioma
     if (processor.getTooltipLanguageEnglish()) {
@@ -175,86 +179,16 @@ JCBMaximizerAudioProcessorEditor::JCBMaximizerAudioProcessorEditor (JCBMaximizer
     
     // Configurar estados iniciales
     bool initialDeltaState = processor.apvts.getRawParameterValue("k_DELTA")->load() > 0.5f;
-    parameterButtons.deltaButton.setButtonText("DELTA");  // Texto siempre igual
-    transferDisplay.setEnvelopeVisible(!initialDeltaState);  // Ocultar envolventes si DELTA está ON
-    // ELIMINADO: transferDisplay.setVisible(!initialDeltaState) - Mantener visible para mostrar histograma
+    parameterButtons.deltaButton.setButtonText("DELTA");
+    
+    // REFACTORIZADO: Usar método centralizado para aplicar estado DELTA inicial
     if (initialDeltaState) {
-        // Configurar medidores en modo delta
-        inputMeterL.setDeltaMode(true);
-        inputMeterR.setDeltaMode(true);
-        outputMeterL.setDeltaMode(true);
-        outputMeterR.setDeltaMode(true);
-        // MAXIMIZER: Medidores sidechain comentados (no tiene sidechain externo)
-        // scMeterL.setDeltaMode(true);
-        // scMeterR.setDeltaMode(true);
-        
-        // Atenuar medidores de entrada
-        inputMeterL.setAlpha(0.2f);
-        inputMeterR.setAlpha(0.2f);
-        // MAXIMIZER: Medidores sidechain comentados (no tiene sidechain externo)
-        // scMeterL.setAlpha(0.2f);
-        // scMeterR.setAlpha(0.2f);
-        
-        // Atenuar sliders de trim
-        trimSlider.setAlpha(0.2f);
-        // MAXIMIZER: No sidechain trim - commenting out
-        // scTrimSlider.setAlpha(0.2f);
-        
-        // Activar modo DELTA en TransferFunctionDisplay
-        transferDisplay.setDeltaMode(true);
-        
-        // Establecer fondo delta si está activo
-        if (deltaBackground.isValid()) {
-            backgroundImage.setImage(deltaBackground, juce::RectanglePlacement::stretchToFit);
-        }
-        
-        // Deshabilitar diagram cuando DELTA está activo al inicio
-        centerButtons.diagramButton.setEnabled(false);
-        centerButtons.diagramButton.setAlpha(0.25f);
-        
-        // Deshabilitar otros controles cuando DELTA está activo al inicio
-        // Presets
-        presetArea.saveButton.setEnabled(false);
-        presetArea.saveButton.setAlpha(0.25f);
-        presetArea.saveAsButton.setEnabled(false);
-        presetArea.saveAsButton.setAlpha(0.25f);
-        presetArea.deleteButton.setEnabled(false);
-        presetArea.deleteButton.setAlpha(0.25f);
-        presetArea.backButton.setEnabled(false);
-        presetArea.backButton.setAlpha(0.25f);
-        presetArea.nextButton.setEnabled(false);
-        presetArea.nextButton.setAlpha(0.25f);
-        presetArea.presetMenu.setEnabled(false);
-        presetArea.presetMenu.setAlpha(0.25f);
-        
-        // UNDO/REDO
-        utilityButtons.undoButton.setEnabled(false);
-        utilityButtons.undoButton.setAlpha(0.15f);  // Dimear más fuerte
-        utilityButtons.redoButton.setEnabled(false);
-        utilityButtons.redoButton.setAlpha(0.15f);  // Dimear más fuerte
-        
-        // A/B y copiar
-        topButtons.abStateButton.setEnabled(false);
-        topButtons.abStateButton.setAlpha(0.15f);  // Dimear más fuerte
-        topButtons.abCopyButton.setEnabled(false);
-        topButtons.abCopyButton.setAlpha(0.15f);  // Dimear más fuerte
-        
-        // SOLO SC
-        // MAXIMIZER: Controles sidechain comentados (no tiene sidechain externo)
-        // sidechainControls.soloScButton.setEnabled(false);
-        // SOLO SC siempre con alpha 1.0
-        
-        // Botones TODO
-        utilityButtons.hqButton.setAlpha(0.25f);
-        utilityButtons.dualMonoButton.setAlpha(0.25f);
-        utilityButtons.stereoLinkedButton.setAlpha(0.25f);
-        utilityButtons.msButton.setAlpha(0.25f);
-        utilityButtons.midiLearnButton.setAlpha(0.25f);
-        
-        // BYPASS
-        parameterButtons.bypassButton.setEnabled(false);
-        parameterButtons.bypassButton.setAlpha(0.25f);
+        applyDeltaModeToAllControls(true);
     }
+    
+    // Registrar listener para sincronización automática de estado DELTA
+    deltaParameterListener = std::make_unique<DeltaParameterListener>(this);
+    processor.apvts.addParameterListener("k_DELTA", deltaParameterListener.get());
     
     updateButtonStates();
     updateFilterButtonText();  // Establecer texto inicial de botones de filtro
@@ -317,13 +251,23 @@ JCBMaximizerAudioProcessorEditor::~JCBMaximizerAudioProcessorEditor()
     stopTimer();
     
     // Eliminar parameter listeners
+    if (deltaParameterListener)
+    {
+        processor.apvts.removeParameterListener("k_DELTA", deltaParameterListener.get());
+    }
+    
     if (transferFunctionListener)
     {
-        processor.apvts.removeParameterListener("a_THD", transferFunctionListener.get());
+        processor.apvts.removeParameterListener("a_GAIN", transferFunctionListener.get());
         processor.apvts.removeParameterListener("b_CELLING", transferFunctionListener.get());
         // MAXIMIZER: c_RATIO y q_KNEE no existen - comentado según CONTEXTO.txt
         // processor.apvts.removeParameterListener("c_RATIO", transferFunctionListener.get());
         // processor.apvts.removeParameterListener("q_KNEE", transferFunctionListener.get());
+    }
+    
+    if (autorelParameterListener)
+    {
+        processor.apvts.removeParameterListener("m_AUTOREL", autorelParameterListener.get());
     }
     
     setLookAndFeel(nullptr);
@@ -437,14 +381,15 @@ void JCBMaximizerAudioProcessorEditor::resized()
     // scTrimSlider.setBounds(getScaledBounds(24, 40, 22, 130));  // Altura expandida para TextBox integrado
     
     // Medidor GR (centro-derecha) - más delgado y alto, posición final ajustada
-    grMeter.setBounds(getScaledBounds(436, 48, 5, 105));
+    grMeter.setBounds(getScaledBounds(437, 48, 5, 105));
     
     // Medidores de salida (lado derecho)
     outputMeterL.setBounds(getScaledBounds(677, 42, 12, 117));
     outputMeterR.setBounds(getScaledBounds(687, 42, 12, 117));
     
     // Sliders de makeup superpuestos a los medidores de salida
-    // MAXIMIZER: i_MAKEUP no existe - eliminado según CONTEXTO.txt
+    // RESTAURADO: makeupSlider posicionado sobre medidores de salida
+    makeupSlider.setBounds(getScaledBounds(677, 40, 22, 130));  // Centrado sobre outputMeterL y outputMeterR
     
     
     // === TRANSFER FUNCTION DISPLAY (CENTER) ===
@@ -456,14 +401,16 @@ void JCBMaximizerAudioProcessorEditor::resized()
     
     // === PARAMETER BUTTONS (ENCIMA DE TRANSFER FUNCTION) ===
     // Botones DITHER, DELTA y BYPASS en fila horizontal superior central
-    leftBottomKnobs.ditherButton.setBounds(getScaledBounds(272, 17, 50, 12));
-    parameterButtons.deltaButton.setBounds(getScaledBounds(327, 17, 50, 12));
-    parameterButtons.bypassButton.setBounds(getScaledBounds(382, 17, 50, 12));
+    rightBottomKnobs.ditherButton.setBounds(getScaledBounds(625, 70, 40, 15));
+
+    parameterButtons.deltaButton.setBounds(getScaledBounds(280, 17, 50, 12));
+    parameterButtons.bypassButton.setBounds(getScaledBounds(380, 17, 50, 12));
     
     // === LEFT SIDE KNOBS === (Between SC meters and transfer function)
     // Top row - THD, CEILING (MAXIMIZER-specific parameters)
-    leftTopKnobs.thdSlider.setBounds(getScaledBounds(60, 63, 75, 75));
-    leftTopKnobs.ceilingSlider.setBounds(getScaledBounds(150, 63, 75, 75));  // NUEVO - b_CELLING slider
+    leftTopKnobs.thdSlider.setBounds(getScaledBounds(35, 75, 70, 70));
+    leftTopKnobs.ceilingSlider.setBounds(getScaledBounds(160, 50, 70, 70
+        ));  // NUEVO - b_CELLING slider
     // MAXIMIZER: c_RATIO no existe - eliminado según CONTEXTO.txt
     // MAXIMIZER: h_RANGE no existe - eliminado según CONTEXTO.txt
     // MAXIMIZER: q_KNEE no existe - eliminado según CONTEXTO.txt
@@ -479,10 +426,10 @@ void JCBMaximizerAudioProcessorEditor::resized()
     // MAXIMIZER: g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
     
     // NUEVO: DET knob - área derecha superior
-    rightTopControls.detSlider.setBounds(getScaledBounds(473, 48, 53, 53));
+    rightTopControls.detSlider.setBounds(getScaledBounds(505, 48, 53, 53));
     
     // MOVIDO: LOOKAHEAD knob - centro de la parte derecha superior 
-    rightTopControls.lookaheadSlider.setBounds(getScaledBounds(532, 75, 53, 53));
+    rightTopControls.lookaheadSlider.setBounds(getScaledBounds(560, 48, 53, 53));
 
     // Bottom row - Attack, Release, Hold
     rightBottomKnobs.atkSlider.setBounds(getScaledBounds(473, 100, 53, 53));
@@ -490,7 +437,7 @@ void JCBMaximizerAudioProcessorEditor::resized()
     rightBottomKnobs.relSlider.setBounds(getScaledBounds(592, 100, 53, 53));
     
     // NUEVO: AUTOREL button - área derecha inferior, junto al REL
-    rightBottomKnobs.autorelButton.setBounds(getScaledBounds(590, 60, 53, 20));
+    rightBottomKnobs.autorelButton.setBounds(getScaledBounds(538, 117, 42, 16));
 
     // === SIDECHAIN CONTROLS (TOP CENTER) ===
     // HPF and LPF knobs swapped with their order buttons
@@ -531,27 +478,27 @@ void JCBMaximizerAudioProcessorEditor::resized()
     topButtons.abCopyButton.setBounds(getScaledBounds(222, 15, 22, 12));
     
     // === BOTONES DE UTILIDAD (INFERIOR IZQUIERDA) ===
-    utilityButtons.undoButton.setBounds(getScaledBounds(15, 179, 22, 12));
-    utilityButtons.redoButton.setBounds(getScaledBounds(37, 179, 22, 12));
-    utilityButtons.resetGuiButton.setBounds(getScaledBounds(61, 179, 30, 12));
-    utilityButtons.runGraphicsButton.setBounds(getScaledBounds(93, 179, 30, 12));
-    utilityButtons.zoomButton.setBounds(getScaledBounds(125, 179, 30, 12));
+    utilityButtons.undoButton.setBounds(getScaledBounds(30, 175, 22, 12));
+    utilityButtons.redoButton.setBounds(getScaledBounds(52, 175, 22, 12));
+    utilityButtons.resetGuiButton.setBounds(getScaledBounds(76, 175, 30, 12));
+    utilityButtons.runGraphicsButton.setBounds(getScaledBounds(108, 175, 30, 12));
+    utilityButtons.zoomButton.setBounds(getScaledBounds(140, 175, 30, 12));
     // Mover botones de tooltip y lenguaje donde estaba el diagram
-    utilityButtons.tooltipToggleButton.setBounds(getScaledBounds(157, 179, 30, 12));
-    utilityButtons.tooltipLangButton.setBounds(getScaledBounds(189, 179, 22, 12));
+    utilityButtons.tooltipToggleButton.setBounds(getScaledBounds(172, 175, 30, 12));
+    utilityButtons.tooltipLangButton.setBounds(getScaledBounds(204, 175, 22, 12));
     
     // Botones DELTA, DIAGRAM y BYPASS - DIAGRAM alineado con botones de sidechain arriba
     const int centerButtonsY = 163;
     const int diagramCenterX = 355; // Mismo centerX que botones de sidechain
     //const int buttonSpacing = 45;   // Espaciado entre DELTA-DIAGRAM y DIAGRAM-BYPASS
     
-    // DIAGRAM centrado en mismo X que botones de sidechain (FILTERS, EXT KEY, SOLO SC)
-    centerButtons.diagramButton.setBounds(getScaledBounds(diagramCenterX - 22, centerButtonsY, 44, 12));
+    // DIAGRAM alineado horizontalmente con DELTA y BYPASS
+    centerButtons.diagramButton.setBounds(getScaledBounds(diagramCenterX - 22, 17, 44, 12));
     
     // Botones TODO movidos abajo a la derecha, centrados en el rectángulo
     // Calcular posición central para el grupo de botones TODO
     const int todoStartX = 503;    // Movido a la derecha para mejor centrado en el rectángulo
-    const int todoY = 179;       // Mismo Y que botones de utilidad
+    const int todoY = 175;       // Mismo Y que botones de utilidad
     utilityButtons.hqButton.setBounds(getScaledBounds(todoStartX, todoY, 18, 12));
     utilityButtons.dualMonoButton.setBounds(getScaledBounds(todoStartX + 20, todoY, 23, 12));
     utilityButtons.stereoLinkedButton.setBounds(getScaledBounds(todoStartX + 45, todoY, 23, 12));
@@ -561,7 +508,7 @@ void JCBMaximizerAudioProcessorEditor::resized()
     
     // === TÍTULO Y VERSIÓN (CENTRO INFERIOR) ===
     // Ancho similar a botones DIAGRAM + GEN DSP combinados
-    titleLink.setBounds(getScaledBounds(304, 179, 95, 15));
+    titleLink.setBounds(getScaledBounds(304, 169, 100, 20));
     
     // Tooltip en esquina superior derecha - ajustado al rectángulo visible
     tooltipComponent.setBounds(getScaledBounds(450, 0, 228, 42));
@@ -632,13 +579,12 @@ void JCBMaximizerAudioProcessorEditor::timerCallback()
                                        canRedo ? DarkTheme::textPrimary : DarkTheme::textSecondary);
     
     // Actualizar texto y tooltip del botón A/B copy dinámicamente
-    bool isSpanish = !processor.getTooltipLanguageEnglish();
     if (processor.getIsStateA()) {
         topButtons.abCopyButton.setButtonText("A-B");
-        topButtons.abCopyButton.setTooltip(isSpanish ? "Copiar A a B" : "Copy A to B");
+        topButtons.abCopyButton.setTooltip(getTooltipText("abcopyatob"));
     } else {
         topButtons.abCopyButton.setButtonText("B-A");
-        topButtons.abCopyButton.setTooltip(isSpanish ? "Copiar B a A" : "Copy B to A");
+        topButtons.abCopyButton.setTooltip(getTooltipText("abcopybtoa"));
     }
     
     // Resetear indicadores de clip cada 3 segundos (180 frames a 60Hz)
@@ -901,10 +847,20 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
     }
     else if (button == &utilityButtons.hqButton)
     {
+        // Desactivar DELTA antes de activar HQ
+        if (parameterButtons.deltaButton.getToggleState()) {
+            parameterButtons.deltaButton.setToggleState(false, juce::sendNotification);
+        }
+        
         // TODO: Implementar oversampling HQ
     }
     else if (button == &utilityButtons.dualMonoButton)
     {
+        // Desactivar DELTA antes de activar Dual Mono
+        if (parameterButtons.deltaButton.getToggleState()) {
+            parameterButtons.deltaButton.setToggleState(false, juce::sendNotification);
+        }
+        
         // Manejar exclusividad de botones de modo estéreo
         if (utilityButtons.dualMonoButton.getToggleState())
         {
@@ -925,6 +881,11 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
     */
     else if (button == &utilityButtons.msButton)
     {
+        // Desactivar DELTA antes de activar M/S
+        if (parameterButtons.deltaButton.getToggleState()) {
+            parameterButtons.deltaButton.setToggleState(false, juce::sendNotification);
+        }
+        
         // Manejar exclusividad de botones de modo estéreo
         if (utilityButtons.msButton.getToggleState())
         {
@@ -934,6 +895,11 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
     }
     else if (button == &topButtons.abStateButton)
     {
+        // Desactivar DELTA antes de alternar estado A/B
+        if (parameterButtons.deltaButton.getToggleState()) {
+            parameterButtons.deltaButton.setToggleState(false, juce::sendNotification);
+        }
+        
         // Alternar estado A/B
         processor.toggleAB();
         
@@ -955,6 +921,11 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
     }
     else if (button == &topButtons.abCopyButton)
     {
+        // Desactivar DELTA antes de copiar estado A/B
+        if (parameterButtons.deltaButton.getToggleState()) {
+            parameterButtons.deltaButton.setToggleState(false, juce::sendNotification);
+        }
+        
         // Copiar estado actual al otro
         if (processor.getIsStateA()) {
             processor.copyAtoB();
@@ -986,6 +957,11 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
     }
     else if (button == &utilityButtons.midiLearnButton)
     {
+        // Desactivar DELTA antes de activar MIDI Learn
+        if (parameterButtons.deltaButton.getToggleState()) {
+            parameterButtons.deltaButton.setToggleState(false, juce::sendNotification);
+        }
+        
         // TODO: Implementar modo MIDI learn
     }
     else if (button == &utilityButtons.zoomButton)
@@ -1058,7 +1034,9 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
     // Manejador del botón CODE removido - funcionalidad manejada por botón DIAGRAM
     else if (button == &parameterButtons.deltaButton)
     {
-        if (parameterButtons.deltaButton.getToggleState()) {
+        bool deltaActive = parameterButtons.deltaButton.getToggleState();
+        
+        if (deltaActive) {
             // DELTA desactiva BYPASS, SOLO SC y DIAGRAM
             parameterButtons.bypassButton.setToggleState(false, juce::sendNotification);
             // MAXIMIZER: Controles sidechain comentados (no tiene sidechain externo)
@@ -1067,17 +1045,10 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
                 centerButtons.diagramButton.setToggleState(false, juce::dontSendNotification);
                 hideDiagram(); // Cerrar DIAGRAM si está abierto
             }
-            
-            // Activar modo DELTA en display
-            transferDisplay.setDeltaMode(true);
-            transferDisplay.setEnvelopeVisible(false);  // Ocultar envolventes cuando DELTA ON
-            // ELIMINADO: setVisible(false) - Mantener visible para mostrar histograma
-        } else {
-            // Desactivar modo DELTA en display
-            transferDisplay.setDeltaMode(false);
-            transferDisplay.setEnvelopeVisible(true);   // Mostrar envolventes cuando DELTA OFF
-            // ELIMINADO: setVisible(true) - Ya está visible
         }
+        
+        // REFACTORIZADO: Usar método centralizado para aplicar/restaurar estado DELTA
+        applyDeltaModeToAllControls(deltaActive);
         
         updateButtonStates();
     }
@@ -1162,21 +1133,21 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     leftTopKnobs.thdSlider.setLookAndFeel(&sliderLAFBig);
     leftTopKnobs.thdSlider.setTextBoxIsEditable(true);
     leftTopKnobs.thdSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    leftTopKnobs.thdSlider.setDoubleClickReturnValue(true, -18.0);
+    leftTopKnobs.thdSlider.setDoubleClickReturnValue(true, 0.0);
     leftTopKnobs.thdSlider.setPopupDisplayEnabled(false, false, this);
     leftTopKnobs.thdSlider.setNumDecimalPlacesToDisplay(1);
     leftTopKnobs.thdSlider.setTextValueSuffix(" dB");
-    // Configurar rango y sesgo para poner -18dB en el centro
-    leftTopKnobs.thdSlider.setRange(-60.0, 0.0, 0.1);
-    leftTopKnobs.thdSlider.setSkewFactorFromMidPoint(-18.0);  // -18dB en el centro
+    // Configurar rango para gain positivo: 0 a 24dB
+    leftTopKnobs.thdSlider.setRange(0.0, 24.0, 0.1);
+    leftTopKnobs.thdSlider.setSkewFactorFromMidPoint(12.0);  // 12dB en el centro
     addAndMakeVisible(leftTopKnobs.thdSlider);
-    if (auto* param = processor.apvts.getParameter("a_THD"))
+    if (auto* param = processor.apvts.getParameter("a_GAIN"))
     {
         leftTopKnobs.thdAttachment = std::make_unique<CustomSliderAttachment>(
             *param, leftTopKnobs.thdSlider, &undoManager);
         leftTopKnobs.thdAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
-    leftTopKnobs.thdSlider.setTooltip(JUCE_UTF8("THD: umbral de activación entre -60 y 0 dB.\nControla el nivel donde el compresor comienza a actuar.\nValor por defecto: -18 dB"));
+    // Tooltip actualizado via getTooltipText("thd") en updateAllTooltips()
     
     // CEILING (b_CELLING) - NUEVO slider específico del Maximizer
     leftTopKnobs.ceilingSlider.setComponentID("ceiling");
@@ -1185,7 +1156,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     leftTopKnobs.ceilingSlider.setLookAndFeel(&sliderLAFBig);
     leftTopKnobs.ceilingSlider.setTextBoxIsEditable(true);
     leftTopKnobs.ceilingSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    leftTopKnobs.ceilingSlider.setDoubleClickReturnValue(true, 0.0);  // Default: 0 dB
+    leftTopKnobs.ceilingSlider.setDoubleClickReturnValue(true, -0.3);  // Default: -0.3 dB
     leftTopKnobs.ceilingSlider.setPopupDisplayEnabled(false, false, this);
     leftTopKnobs.ceilingSlider.setNumDecimalPlacesToDisplay(1);
     // Custom text formatting para mostrar "-12 dB" en el medio
@@ -1207,7 +1178,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
             *param, leftTopKnobs.ceilingSlider, &undoManager);
         leftTopKnobs.ceilingAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
-    leftTopKnobs.ceilingSlider.setTooltip(JUCE_UTF8("CEILING: nivel máximo de salida entre -60 y 0 dB.\nControla el techo de limitación del maximizer.\nValor por defecto: 0 dB"));
+    // Tooltip actualizado via getTooltipText("ceiling") en updateAllTooltips()
     
     // MAXIMIZER: c_RATIO no existe - eliminado según CONTEXTO.txt
 
@@ -1218,7 +1189,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     // LA (Anticipación) - MOVIDO a rightTopControls
     rightTopControls.lookaheadSlider.setComponentID("lookahead");
     rightTopControls.lookaheadSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    rightTopControls.lookaheadSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 16);
+    rightTopControls.lookaheadSlider.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 70, 16);
     rightTopControls.lookaheadSlider.setLookAndFeel(&sliderLAFBig);
     rightTopControls.lookaheadSlider.setTextBoxIsEditable(true);
     rightTopControls.lookaheadSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -1235,7 +1206,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
             *param, rightTopControls.lookaheadSlider, &undoManager);
         rightTopControls.lookaheadAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
-    rightTopControls.lookaheadSlider.setTooltip(JUCE_UTF8("LOOKAHEAD: anticipación entre 0 y 10 ms.\nEvita distorsión en transitorios rápidos.\nValor por defecto: 0 ms"));
+    // Tooltip actualizado via getTooltipText("lookahead") en updateAllTooltips()
     
     // MAXIMIZER: u_SOFTCLIP no existe - eliminado según CONTEXTO.txt
     
@@ -1246,7 +1217,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     rightBottomKnobs.atkSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 70, 16);
     rightBottomKnobs.atkSlider.setLookAndFeel(&sliderLAFBig);
     rightBottomKnobs.atkSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    rightBottomKnobs.atkSlider.setDoubleClickReturnValue(true, 1.0);  // Valor por defecto 1ms
+    rightBottomKnobs.atkSlider.setDoubleClickReturnValue(true, 100.0);  // Valor por defecto 100ms
     rightBottomKnobs.atkSlider.setPopupDisplayEnabled(false, false, this);
     rightBottomKnobs.atkSlider.setTextBoxIsEditable(true);
     // Custom text formatting con decimales progresivos
@@ -1270,7 +1241,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
             *param, rightBottomKnobs.atkSlider, &undoManager);
         rightBottomKnobs.atkAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
-    rightBottomKnobs.atkSlider.setTooltip(JUCE_UTF8("ATK: tiempo de ataque entre 0.1 y 250 ms.\nControla la respuesta ante aumentos de nivel.\nValor por defecto: 5 ms"));
+    // Tooltip actualizado via getTooltipText("attack") en updateAllTooltips()
     
     // REL - modificado con rango mínimo de 1ms y formato de decimales progresivo
     rightBottomKnobs.relSlider.setComponentID("release");
@@ -1280,7 +1251,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     rightBottomKnobs.relSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     rightBottomKnobs.relSlider.setRange(0.1, 1000.0, 0.01);  // Coherente con parámetro
     rightBottomKnobs.relSlider.setSkewFactorFromMidPoint(30.0);  // Centrar rango operativo 1-50ms
-    rightBottomKnobs.relSlider.setDoubleClickReturnValue(true, 120.0);  // Valor por defecto 120ms
+    rightBottomKnobs.relSlider.setDoubleClickReturnValue(true, 200.0);  // Valor por defecto 200ms
     rightBottomKnobs.relSlider.setPopupDisplayEnabled(false, false, this);
     rightBottomKnobs.relSlider.setTextBoxIsEditable(true);
     // Custom text formatting con decimales progresivos - coherente con parámetro
@@ -1305,21 +1276,21 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     // === NUEVOS CONTROLES MAXIMIZER ===
     
     // DITHER button - área izquierda
-    leftBottomKnobs.ditherButton.setComponentID("dither");
-    leftBottomKnobs.ditherButton.setLookAndFeel(&smallButtonLAF);
-    leftBottomKnobs.ditherButton.setButtonText("DITHER");
-    leftBottomKnobs.ditherButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
-    leftBottomKnobs.ditherButton.setColour(juce::TextButton::buttonOnColourId, DarkTheme::accent);
-    leftBottomKnobs.ditherButton.setColour(juce::TextButton::textColourOffId, DarkTheme::textPrimary);
-    leftBottomKnobs.ditherButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
-    leftBottomKnobs.ditherButton.setClickingTogglesState(true);
-    addAndMakeVisible(leftBottomKnobs.ditherButton);
+    rightBottomKnobs.ditherButton.setComponentID("dither");
+    rightBottomKnobs.ditherButton.setLookAndFeel(&smallButtonLAF);
+    rightBottomKnobs.ditherButton.setButtonText("DITHER");
+    rightBottomKnobs.ditherButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    rightBottomKnobs.ditherButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF46224F));
+    rightBottomKnobs.ditherButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    rightBottomKnobs.ditherButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    rightBottomKnobs.ditherButton.setClickingTogglesState(true);
+    addAndMakeVisible(rightBottomKnobs.ditherButton);
     if (auto* param = processor.apvts.getParameter("g_DITHER"))
     {
-        leftBottomKnobs.ditherAttachment = std::make_unique<UndoableButtonAttachment>(
-            *param, leftBottomKnobs.ditherButton, &undoManager);
+        rightBottomKnobs.ditherAttachment = std::make_unique<UndoableButtonAttachment>(
+            *param, rightBottomKnobs.ditherButton, &undoManager);
     }
-    leftBottomKnobs.ditherButton.setTooltip("DITHER: Añade dither para reducir artefactos de cuantización\nen niveles de señal muy bajos");
+    // Tooltip actualizado via getTooltipText("dither") en updateAllTooltips()
     
     // DET knob - área derecha superior  
     rightTopControls.detSlider.setComponentID("detect");
@@ -1330,7 +1301,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     rightTopControls.detSlider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     rightTopControls.detSlider.setRange(0.0, 1.0, 0.01);
     rightTopControls.detSlider.setValue(0.0);
-    rightTopControls.detSlider.setDoubleClickReturnValue(true, 0.0);
+    rightTopControls.detSlider.setDoubleClickReturnValue(true, 1.0);  // Corregido: 0.0 → 1.0 (RMS)
     rightTopControls.detSlider.setPopupDisplayEnabled(false, false, this);
     rightTopControls.detSlider.setNumDecimalPlacesToDisplay(2);
     // Custom text formatting para mostrar Peak/RMS
@@ -1352,9 +1323,9 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     rightBottomKnobs.autorelButton.setLookAndFeel(&smallButtonLAF);
     rightBottomKnobs.autorelButton.setButtonText("AUTOREL");
     rightBottomKnobs.autorelButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
-    rightBottomKnobs.autorelButton.setColour(juce::TextButton::buttonOnColourId, DarkTheme::accent);
+    rightBottomKnobs.autorelButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF2F594A));
     rightBottomKnobs.autorelButton.setColour(juce::TextButton::textColourOffId, DarkTheme::textPrimary);
-    rightBottomKnobs.autorelButton.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    rightBottomKnobs.autorelButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     rightBottomKnobs.autorelButton.setClickingTogglesState(true);
     addAndMakeVisible(rightBottomKnobs.autorelButton);
     if (auto* param = processor.apvts.getParameter("m_AUTOREL"))
@@ -1363,7 +1334,7 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
             *param, rightBottomKnobs.autorelButton, &undoManager);
         rightBottomKnobs.autorelAttachment->onParameterChange = [this]() { handleParameterChange(); };
     } 
-    rightBottomKnobs.autorelButton.setTooltip("AUTOREL: Liberación automática adaptativa\nActiva release inteligente basado en el material de audio");
+    // Tooltip actualizado via getTooltipText("autorel") en updateAllTooltips()
 
     // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
 
@@ -1434,8 +1405,17 @@ void JCBMaximizerAudioProcessorEditor::setupMeters()
         trimAttachment->onParameterChange = [this]() { handleParameterChange(); };
     }
     
+    // Slider de makeup - RESTAURADO para i_MAKEUP
+    makeupSlider.setComponentID("makeup");
+    addAndMakeVisible(makeupSlider);
     
-    // MAXIMIZER: i_MAKEUP no existe - eliminado según CONTEXTO.txt
+    // Vincular slider de makeup al parámetro i_MAKEUP - usando attachment thread-safe
+    if (auto* param = processor.apvts.getParameter("i_MAKEUP"))
+    {
+        makeupAttachment = std::make_unique<CustomSliderAttachment>(
+            *param, makeupSlider, &undoManager);
+        makeupAttachment->onParameterChange = [this]() { handleParameterChange(); };
+    }
 
     // MAXIMIZER: No sidechain trim - commenting out entire scTrimSlider setup
     /*
@@ -1444,7 +1424,8 @@ void JCBMaximizerAudioProcessorEditor::setupMeters()
     addAndMakeVisible(scTrimSlider);
     
     // Establecer propiedades iniciales para el slider de trim de sidechain
-    scTrimSlider.setTooltip(JUCE_UTF8("SC TRIM: ganancia de entrada del sidechain entre -12 y +12 dB.\nAjusta el nivel del sidechain externo.\nValor por defecto: 0 dB, se activa con EXT KEY"));
+    // MAXIMIZER: No sidechain trim parameter - tooltip comentado
+    // scTrimSlider.setTooltip(JUCE_UTF8("SC TRIM: ganancia de entrada del sidechain entre -12 y +12 dB.\nAjusta el nivel del sidechain externo.\nValor por defecto: 0 dB, se activa con EXT KEY"));
     
     // MAXIMIZER: No sidechain trim parameter
     // Vincular slider de trim de sidechain al parámetro y_SCTRIM - ahora usando attachment thread-safe
@@ -1478,7 +1459,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
     presetArea.saveButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     presetArea.saveButton.addListener(this);
     addAndMakeVisible(presetArea.saveButton);
-    presetArea.saveButton.setTooltip(JUCE_UTF8("SAVE: guarda el preset actual.\nSobrescribe el preset seleccionado con valores actuales.\nNo funciona con DEFAULT"));
+    // Tooltip actualizado via getTooltipText("save") en updateAllTooltips()
     
     // Botón Save As - estilo transparente
     presetArea.saveAsButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
@@ -1487,7 +1468,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
     presetArea.saveAsButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     presetArea.saveAsButton.addListener(this);
     addAndMakeVisible(presetArea.saveAsButton);
-    presetArea.saveAsButton.setTooltip(JUCE_UTF8("SAVE AS: guarda como nuevo preset.\nCrea un nuevo archivo de preset con los valores actuales.\nPermite crear presets personalizados"));
+    // Tooltip actualizado via getTooltipText("saveas") en updateAllTooltips()
     
     // Botón Delete - estilo transparente
     presetArea.deleteButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
@@ -1496,7 +1477,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
     presetArea.deleteButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     presetArea.deleteButton.addListener(this);
     addAndMakeVisible(presetArea.deleteButton);
-    presetArea.deleteButton.setTooltip(JUCE_UTF8("DELETE: elimina el preset seleccionado.\nBorra permanentemente el archivo de preset.\nRequiere confirmación"));
+    // Tooltip actualizado via getTooltipText("delete") en updateAllTooltips()
     
     // Botón Back - estilo transparente
     presetArea.backButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
@@ -1505,7 +1486,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
     presetArea.backButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     presetArea.backButton.addListener(this);
     addAndMakeVisible(presetArea.backButton);
-    presetArea.backButton.setTooltip(JUCE_UTF8("BACK: selecciona el preset anterior.\nNavega al preset previo en la lista.\nCicla al final si está al principio"));
+    // Tooltip actualizado via getTooltipText("back") en updateAllTooltips()
     
     // Botón Next - estilo transparente
     presetArea.nextButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
@@ -1514,7 +1495,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
     presetArea.nextButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     presetArea.nextButton.addListener(this);
     addAndMakeVisible(presetArea.nextButton);
-    presetArea.nextButton.setTooltip(JUCE_UTF8("NEXT: selecciona el siguiente preset.\nNavega al siguiente preset en la lista.\nCicla al principio si está al final"));
+    // Tooltip actualizado via getTooltipText("next") en updateAllTooltips()
     
     // Menú de preset - usando CustomComboBox como en JCBExpansorGate
     presetArea.presetMenu.setJustificationType(juce::Justification::centred);
@@ -1560,7 +1541,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                 float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
                 trimSlider.setValue(realValue, juce::sendNotificationSync);
             }
-            if (auto* param = processor.apvts.getParameter("a_THD")) {
+            if (auto* param = processor.apvts.getParameter("a_GAIN")) {
                 float defaultValue = param->getDefaultValue();
                 float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
                 leftTopKnobs.thdSlider.setValue(realValue, juce::sendNotificationSync);
@@ -1620,14 +1601,11 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                 leftTopKnobs.kneeSlider.setValue(realValue, juce::sendNotificationSync);
             }
             */
-            // MAXIMIZER: i_MAKEUP no existe - comentado según CONTEXTO.txt
-            /*
             if (auto* param = processor.apvts.getParameter("i_MAKEUP")) {
                 float defaultValue = param->getDefaultValue();
                 float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
                 makeupSlider.setValue(realValue, juce::sendNotificationSync);
             }
-            */
             // MAXIMIZER: No sidechain controls - commenting out
             /*
             if (auto* param = processor.apvts.getParameter("j_HPF")) {
@@ -1686,18 +1664,25 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                 sidechainControls.keyButton.setToggleState(toggleState, juce::sendNotificationSync);
             }
             */
-            // MAXIMIZER: u_SOFTCLIP no existe - comentado según CONTEXTO.txt
-            /*
-            if (auto* param = processor.apvts.getParameter("u_SOFTCLIP")) {
-                float defaultValue = param->getDefaultValue();
-                float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
-                leftBottomKnobs.clipSlider.setValue(realValue, juce::sendNotificationSync);
-            }
-            */
             if (auto* param = processor.apvts.getParameter("k_DELTA")) {
                 float defaultValue = param->getDefaultValue();
                 bool toggleState = defaultValue >= 0.5f;
                 parameterButtons.deltaButton.setToggleState(toggleState, juce::sendNotificationSync);
+            }
+            if (auto* param = processor.apvts.getParameter("g_DITHER")) {
+                float defaultValue = param->getDefaultValue();
+                bool toggleState = defaultValue >= 0.5f;
+                rightBottomKnobs.ditherButton.setToggleState(toggleState, juce::sendNotificationSync);
+            }
+            if (auto* param = processor.apvts.getParameter("l_DETECT")) {
+                float defaultValue = param->getDefaultValue();
+                float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
+                rightTopControls.detSlider.setValue(realValue, juce::sendNotificationSync);
+            }
+            if (auto* param = processor.apvts.getParameter("m_AUTOREL")) {
+                float defaultValue = param->getDefaultValue();
+                bool toggleState = defaultValue >= 0.5f;
+                rightBottomKnobs.autorelButton.setToggleState(toggleState, juce::sendNotificationSync);
             }
             // MAXIMIZER: No sidechain trim - commenting out
             /*
@@ -1803,7 +1788,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
         // Actualizar la gráfica de transferencia con los valores actuales
         // Es necesario obtener los valores directamente de los parámetros
         // porque los sliders pueden no estar actualizados todavía
-        if (auto* thdParam = processor.apvts.getRawParameterValue("a_THD")) {
+        if (auto* thdParam = processor.apvts.getRawParameterValue("a_GAIN")) {
             transferDisplay.setThreshold(thdParam->load());
         }
         if (auto* ceilingParam = processor.apvts.getRawParameterValue("b_CELLING")) {
@@ -1868,7 +1853,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     utilityButtons.resetGuiButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     utilityButtons.resetGuiButton.addListener(this);
     addAndMakeVisible(utilityButtons.resetGuiButton);
-    utilityButtons.resetGuiButton.setTooltip(JUCE_UTF8("SIZE: cicla entre diferentes tamaños de ventana.\nClick cambia entre: Actual → Máximo → Mínimo → Actual.\nÚtil para ajustar rápidamente el tamaño del plugin"));
+    // Tooltip actualizado via getTooltipText("resetgui") en updateAllTooltips()
     
     // El botón de bypass se ha movido a parameterButtons
 
@@ -1880,7 +1865,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     utilityButtons.runGraphicsButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     utilityButtons.runGraphicsButton.addListener(this);
     addAndMakeVisible(utilityButtons.runGraphicsButton);
-    utilityButtons.runGraphicsButton.setTooltip(JUCE_UTF8("GRAPHICS: muestra envolventes en tiempo real.\nVisualiza las formas de onda de entrada y salida.\nDesactivar mejora el rendimiento en CPUs lentas"));
+    // Tooltip actualizado via getTooltipText("graphics") en updateAllTooltips()
     
     // Botón toggle de tooltip - estilo transparente
     utilityButtons.tooltipToggleButton.setClickingTogglesState(true);
@@ -1891,7 +1876,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     utilityButtons.tooltipToggleButton.setToggleState(true, juce::dontSendNotification); // ON por defecto
     utilityButtons.tooltipToggleButton.addListener(this);
     addAndMakeVisible(utilityButtons.tooltipToggleButton);
-    utilityButtons.tooltipToggleButton.setTooltip(JUCE_UTF8("TOOLTIP: muestra/oculta los tooltips de ayuda.\nActiva o desactiva las ventanas de ayuda emergentes."));
+    // Tooltip actualizado via getTooltipText("tooltiptoggle") en updateAllTooltips()
     
     // Botón de idioma - estilo transparente
     utilityButtons.tooltipLangButton.setClickingTogglesState(false);  // No toggle, solo botón normal
@@ -1902,7 +1887,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     utilityButtons.tooltipLangButton.setButtonText("esp");  // Texto inicial para español
     utilityButtons.tooltipLangButton.addListener(this);
     addAndMakeVisible(utilityButtons.tooltipLangButton);
-    utilityButtons.tooltipLangButton.setTooltip(JUCE_UTF8("IDIOMA: cambia entre español e inglés.\nAlterna el idioma de los tooltips."));
+    // Tooltip actualizado via getTooltipText("tooltiplang") en updateAllTooltips()
     
     // Botón HQ - oversampling
     utilityButtons.hqButton.setClickingTogglesState(true);
@@ -1933,7 +1918,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     utilityButtons.stereoLinkedButton.setToggleState(true, juce::dontSendNotification); // Siempre ON
     // No listener necesario ya que siempre está activo
     addAndMakeVisible(utilityButtons.stereoLinkedButton);
-    utilityButtons.stereoLinkedButton.setTooltip(JUCE_UTF8("LINK: procesamiento stereo enlazado.\nSiempre activo - el plugin solo funciona en modo stereo linked."));
+    // Tooltip actualizado via getTooltipText("link") en updateAllTooltips()
     utilityButtons.stereoLinkedButton.setEnabled(false);  // Disabled - can't be changed
     
     // Botón M/S
@@ -1964,7 +1949,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     topButtons.abCopyButton.addListener(this);
     topButtons.abCopyButton.setButtonText("A-B");  // Start showing A to B
     addAndMakeVisible(topButtons.abCopyButton);
-    topButtons.abCopyButton.setTooltip("Copy A to B");  // Tooltip inicial
+    // Tooltip actualizado dinámicamente en updateAbButtonState()
     
     // MIDI Learn button
     utilityButtons.midiLearnButton.setClickingTogglesState(true);
@@ -1986,7 +1971,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     addAndMakeVisible(utilityButtons.zoomButton);
     utilityButtons.zoomButton.setButtonText("zoom"); // Estado inicial: Normal
     utilityButtons.zoomButton.setToggleState(false, juce::dontSendNotification); // Toggle OFF para normal
-    utilityButtons.zoomButton.setTooltip(JUCE_UTF8("ZOOM: cambia entre vista normal y ampliada.\nNormal: -72dB a 0dB\nZoom x2: -48dB a 0dB"));
+    // Tooltip actualizado via getTooltipText("zoom") en updateAllTooltips()
     
     // Botón Diagram
     centerButtons.diagramButton.setClickingTogglesState(true);
@@ -1996,7 +1981,7 @@ void JCBMaximizerAudioProcessorEditor::setupUtilityButtons()
     centerButtons.diagramButton.setColour(juce::TextButton::textColourOnId, DarkTheme::textPrimary);
     centerButtons.diagramButton.addListener(this);
     addAndMakeVisible(centerButtons.diagramButton);
-    centerButtons.diagramButton.setTooltip(JUCE_UTF8("DIAGRAM: muestra el diagrama de bloques del procesador.\nMuestra un overlay con el esquema de procesamiento de audio."));
+    // Tooltip actualizado via getTooltipText("diagram") en updateAllTooltips()
 
 }
 
@@ -2013,7 +1998,7 @@ void JCBMaximizerAudioProcessorEditor::setupParameterButtons()
     // Attachment de DELTA - excluido del undo (sin UndoManager) y no automatizable
     parameterButtons.deltaAttachment = std::make_unique<UndoableButtonAttachment>(
         *processor.apvts.getParameter("k_DELTA"), parameterButtons.deltaButton, nullptr);
-    parameterButtons.deltaButton.setTooltip(JUCE_UTF8("DELTA: escucha solo la diferencia.\nReproducir la señal procesada menos la original.\nÚtil para escuchar exactamente qué está cambiando"));
+    // Tooltip actualizado via getTooltipText("delta") en updateAllTooltips()
     
     // Botón BYPASS - movido desde utilityButtons
     parameterButtons.bypassButton.setClickingTogglesState(true);
@@ -2026,7 +2011,7 @@ void JCBMaximizerAudioProcessorEditor::setupParameterButtons()
     // Attachment de BYPASS - excluido del undo (sin UndoManager) y no automatizable
     parameterButtons.bypassAttachment = std::make_unique<UndoableButtonAttachment>(
         *processor.apvts.getParameter("h_BYPASS"), parameterButtons.bypassButton, nullptr);
-    parameterButtons.bypassButton.setTooltip(JUCE_UTF8("BYPASS: desactiva el procesamiento del plugin.\nEs independiente del bypass del DAW y está suavizado.\nValor por defecto: OFF"));
+    // Tooltip actualizado via getTooltipText("bypass") en updateAllTooltips()
 }
 
 void JCBMaximizerAudioProcessorEditor::setupBackground()
@@ -2079,6 +2064,11 @@ void JCBMaximizerAudioProcessorEditor::updateButtonStates()
     // updateSidechainComponentStates();
     updateBackgroundState();
     updateMeterStates();
+    
+    // MEJORADO: Asegurar que el estado DELTA se aplica correctamente
+    // Esto es crítico para resolver el bug de sincronización al reabrir la ventana
+    bool currentDeltaState = processor.apvts.getRawParameterValue("k_DELTA")->load() > 0.5f;
+    applyDeltaModeToAllControls(currentDeltaState);
 }
 
 void JCBMaximizerAudioProcessorEditor::updateBasicButtonStates()
@@ -2231,6 +2221,108 @@ void JCBMaximizerAudioProcessorEditor::updateMeterStates()
     // Actualizar gradiente de salida para modo bypass
     outputMeterL.setBypassMode(bypassActive);
     outputMeterR.setBypassMode(bypassActive);
+    
+    // CORRECCIÓN: Asegurar sincronización estado BYPASS al reabrir plugin
+    // Esto resuelve el problema de la función de transferencia que reaparece incorrectamente
+    transferDisplay.setBypassMode(bypassActive);
+}
+
+//==============================================================================
+// MÉTODOS DE MANEJO DE DELTA MODE
+//==============================================================================
+
+void JCBMaximizerAudioProcessorEditor::applyDeltaModeToAllControls(bool deltaActive)
+{
+    // Aplicar modo DELTA a todos los controles de forma centralizada y simétrica
+    applyDeltaModeToPresetControls(deltaActive);
+    applyDeltaModeToAbControls(deltaActive);
+    applyDeltaModeToUndoRedoControls(deltaActive);
+    applyDeltaModeToUtilityControls(deltaActive);
+    applyDeltaModeToMetersAndDisplay(deltaActive);
+}
+
+void JCBMaximizerAudioProcessorEditor::applyDeltaModeToPresetControls(bool deltaActive)
+{
+    // Controles de preset - mantener completamente normales en modo DELTA
+    // Solo aplicar modo visual delta si es necesario, sin cambios de alpha/enabled
+    
+    // Todos los controles de preset permanecen enabled y con alpha 1.0
+    presetArea.saveButton.setEnabled(true);
+    presetArea.saveButton.setAlpha(1.0f);
+    presetArea.saveAsButton.setEnabled(true);
+    presetArea.saveAsButton.setAlpha(1.0f);
+    presetArea.deleteButton.setEnabled(true);
+    presetArea.deleteButton.setAlpha(1.0f);
+    presetArea.backButton.setEnabled(true);
+    presetArea.backButton.setAlpha(1.0f);
+    presetArea.nextButton.setEnabled(true);
+    presetArea.nextButton.setAlpha(1.0f);
+    presetArea.presetMenu.setEnabled(true);
+    presetArea.presetMenu.setAlpha(1.0f);
+}
+
+void JCBMaximizerAudioProcessorEditor::applyDeltaModeToAbControls(bool deltaActive)
+{
+    // Controles A/B - mantener completamente normales en modo DELTA
+    // Solo aplicar modo visual delta si es necesario, sin cambios de alpha/enabled
+    
+    // Todos los controles A/B permanecen enabled y con alpha 1.0
+    topButtons.abStateButton.setEnabled(true);
+    topButtons.abStateButton.setAlpha(1.0f);
+    topButtons.abCopyButton.setEnabled(true);
+    topButtons.abCopyButton.setAlpha(1.0f);
+}
+
+void JCBMaximizerAudioProcessorEditor::applyDeltaModeToUndoRedoControls(bool deltaActive)
+{
+    // Controles undo/redo - mantener estado normal basado en disponibilidad real
+    // En modo DELTA no se atenúan, pero mantienen su funcionalidad normal
+    
+    bool canUndo = undoManager.canUndo();
+    bool canRedo = undoManager.canRedo();
+    
+    utilityButtons.undoButton.setEnabled(canUndo);
+    utilityButtons.undoButton.setAlpha(canUndo ? 1.0f : 0.3f);
+    utilityButtons.redoButton.setEnabled(canRedo);
+    utilityButtons.redoButton.setAlpha(canRedo ? 1.0f : 0.3f);
+}
+
+void JCBMaximizerAudioProcessorEditor::applyDeltaModeToUtilityControls(bool deltaActive)
+{
+    // Controles de utilidad - mantener completamente normales en modo DELTA
+    // Solo aplicar modo visual delta si es necesario, sin cambios de alpha/enabled
+    
+    // Botones TODO - mantener alpha normal para permitir salir de DELTA
+    utilityButtons.hqButton.setAlpha(1.0f);
+    utilityButtons.dualMonoButton.setAlpha(1.0f);
+    utilityButtons.stereoLinkedButton.setAlpha(1.0f);
+    utilityButtons.msButton.setAlpha(1.0f);
+    utilityButtons.midiLearnButton.setAlpha(1.0f);
+    
+    // Botones exclusivos BYPASS y DIAGRAM - mantener enabled para permitir salir de DELTA
+    parameterButtons.bypassButton.setEnabled(true);
+    parameterButtons.bypassButton.setAlpha(1.0f);
+    
+    centerButtons.diagramButton.setEnabled(true);
+    centerButtons.diagramButton.setAlpha(1.0f);
+}
+
+void JCBMaximizerAudioProcessorEditor::applyDeltaModeToMetersAndDisplay(bool deltaActive)
+{
+    // Aplicar modo DELTA a medidores y display (solo gradientes, sin alpha)
+    inputMeterL.setDeltaMode(deltaActive);
+    inputMeterR.setDeltaMode(deltaActive);
+    outputMeterL.setDeltaMode(deltaActive);
+    outputMeterR.setDeltaMode(deltaActive);
+    grMeter.setDeltaMode(deltaActive);
+    
+    // Configurar TransferDisplay
+    transferDisplay.setDeltaMode(deltaActive);
+    transferDisplay.setEnvelopeVisible(!deltaActive);
+    
+    // ELIMINADO: Gestión de fondo movida a updateBackgroundState() para evitar conflictos
+    // El fondo se gestiona centralizadamente en updateBackgroundState() con la lógica de prioridad correcta:
+    // bypass > delta > normal
 }
 
 void JCBMaximizerAudioProcessorEditor::updateTransferDisplay()
@@ -2347,7 +2439,7 @@ void JCBMaximizerAudioProcessorEditor::updateSliderValues()
     // FIXED: Los comentarios anteriores eran incorrectos - todos los sliders usan CustomSliderAttachment
     
     // Left top knobs - Todos usan CustomSliderAttachment
-    if (auto* param = processor.apvts.getRawParameterValue("a_THD"))
+    if (auto* param = processor.apvts.getRawParameterValue("a_GAIN"))
         leftTopKnobs.thdSlider.setValue(param->load(), juce::dontSendNotification);
     
     if (auto* param = processor.apvts.getRawParameterValue("b_CELLING"))
@@ -2361,17 +2453,10 @@ void JCBMaximizerAudioProcessorEditor::updateSliderValues()
     // if (auto* param = processor.apvts.getRawParameterValue("q_KNEE"))
     //     leftTopKnobs.kneeSlider.setValue(param->load(), juce::dontSendNotification);
     
-    // Left bottom knobs
-    // MAXIMIZER: o_DRYWET no existe - parámetro eliminado según CONTEXTO.txt
-    // if (auto* param = processor.apvts.getRawParameterValue("o_DRYWET"))
-    //     leftBottomKnobs.drywetSlider.setValue(param->load(), juce::dontSendNotification);
         
     if (auto* param = processor.apvts.getRawParameterValue("n_LOOKAHEAD"))
         rightTopControls.lookaheadSlider.setValue(param->load(), juce::dontSendNotification);
         
-    // MAXIMIZER: u_SOFTCLIP no existe - parámetro eliminado según CONTEXTO.txt
-    // if (auto* param = processor.apvts.getRawParameterValue("u_SOFTCLIP"))
-    //     leftBottomKnobs.clipSlider.setValue(param->load(), juce::dontSendNotification);
         
     
     // Right top controls
@@ -2907,26 +2992,14 @@ void JCBMaximizerAudioProcessorEditor::hideCredits()
 //==============================================================================
 void JCBMaximizerAudioProcessorEditor::updateTodoButtonTexts()
 {
-    // Update TODO button tooltips based on current language
-    bool isSpanish = (currentLanguage == TooltipLanguage::Spanish);
+    // Update TODO button tooltips using getTooltipText() for consistency
+    utilityButtons.hqButton.setTooltip(getTooltipText("hq"));
+    utilityButtons.dualMonoButton.setTooltip(getTooltipText("dualmono"));
+    utilityButtons.msButton.setTooltip(getTooltipText("ms"));
+    topButtons.abStateButton.setTooltip(getTooltipText("abstate"));
+    utilityButtons.midiLearnButton.setTooltip(getTooltipText("midilearn"));
     
-    // HQ button tooltip
-    utilityButtons.hqButton.setTooltip(isSpanish ? JUCE_UTF8("POR HACER: Habilita oversampling para mayor calidad.") : "TODO: Enables oversampling for higher quality.");
-    
-    // Dual Mono button tooltip
-    utilityButtons.dualMonoButton.setTooltip(isSpanish ? JUCE_UTF8("POR HACER: Procesa canales L/R independientemente.") : "TODO: Processes L/R channels independently.");
-    
-    // Stereo Linked button - mantener tooltip actual
-    // utilityButtons.stereoLinkedButton tooltip ya está implementado
-    
-    // Botón M/S tooltip
-    utilityButtons.msButton.setTooltip(isSpanish ? JUCE_UTF8("POR HACER: Procesa en formato Mid/Side.") : "TODO: Processes in M/S format.");
-    
-    // A/B State button tooltip
-    topButtons.abStateButton.setTooltip(isSpanish ? JUCE_UTF8("Alterna entre dos configuraciones A/B para comparar ajustes.") : "Switches between two A/B configurations to compare settings.");
-    
-    // MIDI Learn button tooltip
-    utilityButtons.midiLearnButton.setTooltip(isSpanish ? JUCE_UTF8("POR HACER: Asigna control MIDI.") : "TODO: Assigns MIDI control.");
+    // Stereo Linked button - se maneja en updateAllTooltips()
     
     
     // Zoom y Diagram mantienen sus tooltips actuales ya que son funcionales
@@ -2947,12 +3020,8 @@ void JCBMaximizerAudioProcessorEditor::updateAllTooltips()
     // MAXIMIZER: q_KNEE no existe - comentado según CONTEXTO.txt
     // leftTopKnobs.kneeSlider.setTooltip(getTooltipText("knee"));
     
-    // Perillas - inferiores izquierdas
-    // MAXIMIZER: o_DRYWET no existe - comentado según CONTEXTO.txt
-    // leftBottomKnobs.drywetSlider.setTooltip(getTooltipText("drywet"));
+    // Perillas - lookahead movido a rightTopControls
     rightTopControls.lookaheadSlider.setTooltip(getTooltipText("lookahead"));
-    // MAXIMIZER: u_SOFTCLIP no existe - comentado según CONTEXTO.txt
-    // leftBottomKnobs.clipSlider.setTooltip(getTooltipText("clip"));
     
     // Perillas - superiores derechas
     // MAXIMIZER: h_RANGE no existe - comentado según CONTEXTO.txt
@@ -2966,6 +3035,8 @@ void JCBMaximizerAudioProcessorEditor::updateAllTooltips()
     // Perillas - inferiores derechas
     rightBottomKnobs.atkSlider.setTooltip(getTooltipText("attack"));
     rightBottomKnobs.relSlider.setTooltip(getTooltipText("release"));
+    rightBottomKnobs.ditherButton.setTooltip(getTooltipText("dither"));    // NUEVO - tooltip para DITHER button
+    rightBottomKnobs.autorelButton.setTooltip(getTooltipText("autorel"));  // NUEVO - tooltip para AUTOREL button
     // MAXIMIZER: f_HOLD no existe - comentado según CONTEXTO.txt
     // rightBottomKnobs.holdSlider.setTooltip(getTooltipText("hold"));
     // speedButton removed
@@ -2973,8 +3044,8 @@ void JCBMaximizerAudioProcessorEditor::updateAllTooltips()
     
     // Sliders de trim y makeup
     trimSlider.setTooltip(getTooltipText("trim"));
-    // MAXIMIZER: i_MAKEUP no existe - comentado según CONTEXTO.txt
-    // makeupSlider.setTooltip(getTooltipText("makeup"));
+    // RESTAURADO: i_MAKEUP tooltip
+    makeupSlider.setTooltip(getTooltipText("makeup"));
     
     // MAXIMIZER: No sidechain trim - commenting out tooltip
     // Sliders de trim de sidechain
@@ -3027,29 +3098,32 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     if (currentLanguage == TooltipLanguage::Spanish)
     {
         // Spanish tooltips
-        if (key == "title") return JUCE_UTF8("JCBExpander: expansor de audio v0.9.0 beta\nPlugin de audio open source\nClick para créditos");
-        if (key == "thd") return JUCE_UTF8("THRESHOLD: nivel donde comienza la expansión\nSeñales bajo este nivel se expanden\nRango: -60 a 0 dB | Por defecto: -18 dB");
+        if (key == "title") return JUCE_UTF8("JCBMaximizer: limitador/maximizador de audio v0.9.0\nPlugin de audio open source\nClick para créditos");
+        if (key == "thd") return JUCE_UTF8("GANANCIA: ganancia de entrada al limitador\nControla el nivel de drive antes del procesamiento\nRango: 0 a 24 dB | Por defecto: 0 dB");
         //if (key == "ratio") return JUCE_UTF8("RATIO: cantidad de expansión aplicada\nRelación entrada/salida bajo el threshold\nRango: 1:1 a 40:1 | Por defecto: 4:1");
         //if (key == "knee") return JUCE_UTF8("KNEE: suavidad de la transición en el threshold\nCrea una curva gradual en vez de ángulo duro\nRango: 1 a 20 dB | Por defecto: 1 dB");
         //if (key == "drywet") return JUCE_UTF8("DRY/WET: mezcla final entre señal original y procesada\nControl de balance entrada/salida\nRango: 0 a 100% | Por defecto: 100%");
-        if (key == "lookahead") return JUCE_UTF8("LOOK AHEAD: retardo para evitar overshooting\nReporta latencia al host\nRango: 0 a 10 ms | Por defecto: 0 ms");
+        if (key == "lookahead") return JUCE_UTF8("LOOKAHEAD: anticipación para evitar distorsión\nEvita overshooting en transitorios rápidos\nRango: 0 a 5 ms | Por defecto: 0 ms");
         //if (key == "clip") return JUCE_UTF8("SOFT CLIP: limitador suave de salida\nPreviene saturación con distorsión armónica\nRango: 0/OFF a 1 | Por defecto: 0/OFF");
         //if (key == "react") return JUCE_UTF8("REACT: respuesta del detector a transientes.\nValores bajos: agresivo | Valores altos: suave.\nRango: 0 a 1 | Por defecto: 0");
-        if (key == "attack") return JUCE_UTF8("ATTACK: tiempo para alcanzar máxima expansión\nVelocidad de respuesta del expansor\nRango: 0.1 a 250 ms | Por defecto: 1 ms");
-        if (key == "detect") return JUCE_UTF8("DET: modo de detección del limitador\n0.0 = Peak (rápido) | 1.0 = RMS (suave)\nValores intermedios mezclan ambos modos\nPor defecto: 0.0 (Peak)");
-        if (key == "release") return JUCE_UTF8("RELEASE: tiempo para volver sin expansión\nPermite valores extremos para efectos creativos\nRango: 0.1 a 1000 ms | Por defecto: 120 ms");
+        if (key == "attack") return JUCE_UTF8("ATTACK: tiempo de ataque del limitador\nControla la respuesta ante aumentos de nivel\nRango: 0.01 a 750 ms | Por defecto: 100 ms");
+        if (key == "detect") return JUCE_UTF8("DET: modo de detección del limitador\n0.0 = Peak (rápido) | 1.0 = Sliding RMS (suave)\nValores intermedios mezclan ambos modos\nPor defecto: 1.0 (Sliding RMS)");
+        if (key == "ceiling") return JUCE_UTF8("CEILING: nivel máximo de salida\nControla el techo de limitación del maximizer\nRango: -60 a 0 dB | Por defecto: -0.3 dB");
+        if (key == "dither") return JUCE_UTF8("DITHER: añade dither TPDF de 16 bits para reducir artefactos\nReduce distorsión de cuantización en niveles bajos\nRango: 0 a 1 | Por defecto: 0 (OFF)");
+        if (key == "autorel") return JUCE_UTF8("AUTOREL: liberación automática adaptativa\nActiva release inteligente basado en el material\nRango: OFF/ON | Por defecto: OFF");
+        if (key == "release") return JUCE_UTF8("RELEASE: tiempo de liberación del limitador\nControla la velocidad de regreso después de limitar\nRango: 1 a 1000 ms | Por defecto: 200 ms");
         //if (key == "hold") return JUCE_UTF8("HOLD: tiempo de retención antes del release\nMantiene la expansión por un período fijo\nRango: 0 a 500 ms | Por defecto: 0 ms");
         //if (key == "range") return JUCE_UTF8("RANGE: límite inferior de expansión\nNivel máximo de reducción de ganancia\nRango: -100 a 0 dB | Por defecto: -20 dB");
-        if (key == "delta") return JUCE_UTF8("DELTA: escucha la expansión aplicada\nParámetro global, no automatizable\nRango: OFF/ON | Por defecto: OFF");
-        if (key == "trim") return JUCE_UTF8("TRIM INPUT: ganancia de entrada al expansor\nAjusta el nivel antes del procesamiento\nRango: -12 a +12 dB | Por defecto: 0 dB");
-        //if (key == "makeup") return JUCE_UTF8("MAKEUP: ganancia de salida manual\nAjusta el nivel final después del procesamiento\nRango: -12 a +12 dB | Por defecto: 0 dB");
+        if (key == "delta") return JUCE_UTF8("DELTA: escucha solo la diferencia\nReproducir la señal procesada menos la original\nEl volumen está normalizado para evitar cambios drásticos");
+        if (key == "trim") return JUCE_UTF8("TRIM: ganancia de entrada al limitador\nAjusta el nivel antes del procesamiento\nRango: -12 a +12 dB | Por defecto: 0 dB");
+        if (key == "makeup") return JUCE_UTF8("MAKEUP: ganancia de salida POST procesador\nAjusta el nivel final después del limitador\nRango: -12 a +12 dB | Por defecto: 0 dB");
         //if (key == "hold") return JUCE_UTF8("HOLD: tiempo de retención antes del release\nMantiene la expansión por un período fijo\nRango: 0 a 500 ms | Por defecto: 0 ms");
         //if (key == "sc") return JUCE_UTF8("FILTERS: activa los filtros del sidechain.\nPermite filtrar la señal, tanto interna como externa, que controla el expansor.\nValor por defecto: OFF");
         //if (key == "extkey") return JUCE_UTF8("SIDECHAIN: selecciona cadena lateral interna o externa.\nINT usa la propia señal, EXT usa entradas auxiliares.\nValor por defecto: INT");
         //if (key == "solosc") return JUCE_UTF8("SOLO SC: escucha filtros sidechain int/ext\nParámetro global, no automatizable\nRango: OFF/ON | Por defecto: OFF");
         //if (key == "hpf") return JUCE_UTF8("HPF: filtro pasa altos del sidechain\nFiltra frecuencias del detector de expansión\nRango: 20 a 20k Hz | Por defecto: 20 Hz");
         //if (key == "lpf") return JUCE_UTF8("LPF: filtro pasa bajos del sidechain\nElimina frecuencias agudas del detector\nRango: 20 Hz a 20 kHz | Por defecto: 20 kHz");
-        //if (key == "save") return JUCE_UTF8("GUARDAR: guarda o sobrescribe preset\nGuarda nuevo o actualiza el preset actual");
+        if (key == "save") return JUCE_UTF8("SAVE: guarda el preset actual\nSobrescribe el preset seleccionado con valores actuales\nNo funciona con DEFAULT");
         if (key == "saveas") return JUCE_UTF8("SAVE AS: guarda como nuevo preset\nCrea un nuevo archivo de preset con los valores actuales\nPermite crear presets personalizados");
         if (key == "delete") return JUCE_UTF8("BORRAR: elimina el preset seleccionado\nRequiere confirmación antes de borrar");
         if (key == "back") return JUCE_UTF8("ANTERIOR: selecciona el preset previo\nNavega hacia atrás en la lista de presets");
@@ -3059,35 +3133,45 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
         if (key == "resetgui") return JUCE_UTF8("SIZE: cicla entre tamaños de ventana\nActual → Máximo → Mínimo → Actual\nAjuste rápido del tamaño del plugin");
         if (key == "bypass") return JUCE_UTF8("BYPASS: desactiva el procesamiento del plugin\nParámetro global, no automatizable. Transición suave\nRango: OFF/ON | Por defecto: OFF");
         if (key == "graphics") return JUCE_UTF8("GRAPHICS: muestra envolventes en tiempo real\nVisualiza env entrada/salida e histograma expansión\nDesactivar mejora rendimiento en CPUs lentas");
-        if (key == "zoom") return JUCE_UTF8("ZOOM: cicla entre vista normal y ampliada\nNormal: -100 a 0dB | x2: -50 a 0dB");
+        if (key == "zoom") return JUCE_UTF8("ZOOM: cicla entre vista normal y ampliada\nNormal: -40 a 0dB | x2: -20 a 0dB");
         if (key == "diagram") return JUCE_UTF8("DIAGRAM: muestra diagrama de bloques del procesador\nDespliega menú con código GenExpr por bloque para copiar");
-        if (key == "transfer") return JUCE_UTF8("GRÁFICA: función de transferencia del expansor\nArrastra para modificar THD, Ratio y Knee\nClick derecho para opciones adicionales");
+        if (key == "transfer") return JUCE_UTF8("GRÁFICA: función de transferencia del limitador\nMuestra la curva de limitación y reducción de ganancia\nClick derecho para opciones adicionales");
         if (key == "tooltiptoggle") return JUCE_UTF8("TOOLTIP: muestra/oculta los tooltips de ayuda\nActiva o desactiva las ventanas de ayuda emergentes");
         if (key == "tooltiplang") return JUCE_UTF8("IDIOMA: cambia entre español e inglés.\nAlterna el idioma de los tooltips.");
         // MAXIMIZER: No sidechain trim - commenting out tooltip
         // if (key == "sctrim") return JUCE_UTF8("SC TRIM: ganancia entrada sidechain -12 a +12 dB\nAjusta nivel del sidechain externo\nPor defecto: 0 dB, se activa con EXT KEY");
         if (key == "link") return JUCE_UTF8("STEREO LINKED: siempre activo.\nEl plugin solo funciona en modo stereo linked.\nAmbos canales siempre están vinculados");
+        if (key == "hq") return JUCE_UTF8("POR HACER: Habilita oversampling para mayor calidad.");
+        if (key == "dualmono") return JUCE_UTF8("POR HACER: Procesa canales L/R independientemente.");
+        if (key == "ms") return JUCE_UTF8("POR HACER: Procesa en formato Mid/Side.");
+        if (key == "abstate") return JUCE_UTF8("Alterna entre dos configuraciones A/B para comparar ajustes.");
+        if (key == "midilearn") return JUCE_UTF8("POR HACER: Asigna control MIDI.");
+        if (key == "abcopyatob") return JUCE_UTF8("Copiar A a B");
+        if (key == "abcopybtoa") return JUCE_UTF8("Copiar B a A");
         //if (key == "smooth") return JUCE_UTF8("SMOOTH: suavizado extra del detector de envolvente\nControla cantidad de suavizado en la detección\nRango: 0 (RAW) a 1 (SMOOTH) | Por defecto: 0");
     }
     else
     {
         // English tooltips
-        if (key == "title") return "JCBExpander: audio expander v0.9.0 beta\nOpen source audio plugin\nClick for credits";
-        //if (key == "thd") return "THRESHOLD: level where expansion begins\nSignals below this level are expanded\nRange: -60 to 0 dB | Default: -18 dB";
+        if (key == "title") return "JCBMaximizer: audio limiter/maximizer v0.9.0\nOpen source audio plugin\nClick for credits";
+        if (key == "thd") return "GAIN: limiter input gain\nControls the drive level before processing\nRange: 0 to 24 dB | Default: 0 dB";
         //if (key == "ratio") return "RATIO: amount of expansion applied\nInput/output relationship below threshold\nRange: 1:1 to 40:1 | Default: 4:1";
         //if (key == "knee") return "KNEE: smoothness of the threshold transition\nCreates a gradual curve instead of hard angle\nRange: 1 to 10 dB | Default: 1 dB";
         //if (key == "drywet") return "DRY/WET: final mix between original and processed signal\nInput/output balance control\nRange: 0 to 100% | Default: 100%";
-        if (key == "lookahead") return "LOOK AHEAD: delay to prevent overshooting\nReports latency to host\nRange: 0 to 10 ms | Default: 0 ms";
+        if (key == "lookahead") return "LOOKAHEAD: anticipation to prevent distortion\nPrevents overshooting on fast transients\nRange: 0 to 5 ms | Default: 0 ms";
         //if (key == "clip") return "SOFT CLIP: soft output limiter\nPrevents clipping with harmonic distortion\nRange: 0/OFF to 1 | Default: 0/OFF";
         //if (key == "react") return "REACT: detector response to transients.\nLow values: aggressive | High values: smooth.\nRange: 0 to 1 | Default: 0";
-        if (key == "attack") return "ATTACK: time to reach maximum expansion\nExpander response speed\nRange: 0.1 to 250 ms | Default: 1 ms";
-        if (key == "detect") return "DET: limiter detection mode\n0.0 = Peak (fast) | 1.0 = RMS (smooth)\nIntermediate values blend both modes\nDefault: 0.0 (Peak)";
-        if (key == "release") return "RELEASE: time to return unexpanded\nAllows extreme values for creative effects\nRange: 0.1 to 1000 ms | Default: 120 ms";
+        if (key == "attack") return "ATTACK: limiter attack time\nControls response to level increases\nRange: 0.01 to 750 ms | Default: 100 ms";
+        if (key == "detect") return "DET: limiter detection mode\n0.0 = Peak (fast) | 1.0 = Sliding RMS (smooth)\nIntermediate values blend both modes\nDefault: 1.0 (Sliding RMS)";
+        if (key == "ceiling") return "CEILING: maximum output level\nControls the maximizer's limiting ceiling\nRange: -60 to 0 dB | Default: -0.3 dB";
+        if (key == "dither") return "DITHER: adds 16-bit TPDF dither to reduce artifacts\nReduces quantization distortion at low levels\nRange: 0 to 1 | Default: 0 (OFF)";
+        if (key == "autorel") return "AUTOREL: adaptive automatic release\nActivates intelligent release based on material\nRange: OFF/ON | Default: OFF";
+        if (key == "release") return "RELEASE: limiter release time\nControls return speed after limiting\nRange: 1 to 1000 ms | Default: 200 ms";
         //if (key == "hold") return "HOLD: retention time before release\nMaintains expansion for a fixed period\nRange: 0 to 500 ms | Default: 0 ms";
         //if (key == "range") return "RANGE: lower limit of expansion\nMaximum level of gain reduction\nRange: -100 to 0 dB | Default: -20 dB";
-        if (key == "delta") return "DELTA: listen to applied expansion\nGlobal parameter, non-automatable\nRange: OFF/ON | Default: OFF";
-        if (key == "trim") return "TRIM INPUT: expander input gain\nAdjusts level before processing\nRange: -12 to +12 dB | Default: 0 dB";
-        //if (key == "makeup") return "MAKEUP: manual output gain\nAdjusts final level after processing\nRange: -12 to +12 dB | Default: 0 dB";
+        if (key == "delta") return "DELTA: listen to the difference only\nPlays processed signal minus original\nVolume is normalized to avoid drastic changes";
+        if (key == "trim") return "TRIM: limiter input gain\nAdjusts level before processing\nRange: -12 to +12 dB | Default: 0 dB";
+        if (key == "makeup") return "MAKEUP: output gain POST processor\nAdjusts final level after limiter\nRange: -12 to +12 dB | Default: 0 dB";
         //if (key == "hold") return "HOLD: retention time before release\nMaintains expansion for a fixed period\nRange: 0 to 500 ms | Default: 0 ms";
         //if (key == "sc") return "FILTERS: activates sidechain filters.\nAllows filtering the signal, both internal and external, that controls the expander.\nDefault: OFF";
         //if (key == "extkey") return "SIDECHAIN: selects internal or external sidechain.\nINT uses input signal, EXT uses auxiliary inputs.\nDefault: INT";
@@ -3104,14 +3188,21 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
         if (key == "resetgui") return JUCE_UTF8("SIZE: cycles through window sizes\nCurrent → Maximum → Minimum → Current\nQuick plugin size adjustment");
         if (key == "bypass") return "BYPASS: disables plugin processing\nGlobal parameter, non-automatable. Smooth transition\nRange: OFF/ON | Default: OFF";
         if (key == "graphics") return "GRAPHICS: shows real-time envelopes\nDisplays input/output env and expansion histogram\nDisable to improve performance on slow CPUs";
-        if (key == "zoom") return "ZOOM: cycles between normal and zoomed view\nNormal: -100 to 0dB | x2: -50 to 0dB";
+        if (key == "zoom") return "ZOOM: cycles between normal and zoomed view\nNormal: -40 to 0dB | x2: -20 to 0dB";
         if (key == "diagram") return "DIAGRAM: shows processor block diagram\nDisplays menu with GenExpr code per block for copying";
-        if (key == "transfer") return "GRAPH: expander transfer function\nDrag to modify THD, Ratio and Knee\nRight click for additional options";
+        if (key == "transfer") return "GRAPH: limiter transfer function\nShows limiting curve and gain reduction\nRight click for additional options";
         if (key == "tooltiptoggle") return "TOOLTIP: show/hide help tooltips.\nEnables or disables popup help windows.";
         if (key == "tooltiplang") return "LANGUAGE: switch between Spanish and English.\nToggles tooltip language.";
         // MAXIMIZER: No sidechain trim - commenting out tooltip
         // if (key == "sctrim") return "SC TRIM: sidechain input gain -12 to +12 dB\nAdjusts external sidechain level\nDefault: 0 dB, activated with EXT KEY";
         if (key == "link") return "STEREO LINKED: always active.\nPlugin only works in stereo linked mode.\nBoth channels are always linked";
+        if (key == "hq") return "TODO: Enables oversampling for higher quality.";
+        if (key == "dualmono") return "TODO: Processes L/R channels independently.";
+        if (key == "ms") return "TODO: Processes in M/S format.";
+        if (key == "abstate") return "Switches between two A/B configurations to compare settings.";
+        if (key == "midilearn") return "TODO: Assigns MIDI control.";
+        if (key == "abcopyatob") return "Copy A to B";
+        if (key == "abcopybtoa") return "Copy B to A";
         //if (key == "smooth") return "SMOOTH: extra envelope detector smoothing\nControls smoothing amount applied to detection\nRange: 0 (RAW) to 1 (SMOOTH) | Default: 0";
     }
 
@@ -3131,7 +3222,7 @@ void JCBMaximizerAudioProcessorEditor::applyAlphaToMainControls(float alpha)
     
     // MAXIMIZER: o_DRYWET y u_SOFTCLIP no existen - eliminados según CONTEXTO.txt
     rightTopControls.lookaheadSlider.setAlpha(alpha);
-    leftBottomKnobs.ditherButton.setAlpha(alpha);  // NUEVO - alpha para DITHER button
+    rightBottomKnobs.ditherButton.setAlpha(alpha);  // NUEVO - alpha para DITHER button
     
     // MAXIMIZER: h_RANGE, g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
     rightTopControls.detSlider.setAlpha(alpha);  // NUEVO - alpha para DET knob
@@ -3313,13 +3404,13 @@ void JCBMaximizerAudioProcessorEditor::initializeCodeContentCache()
     std::vector<CodeMapping> mappings = {
         {"TRIM IN", BinaryData::InputTrim_txt, BinaryData::InputTrim_txtSize},
         //{"TRIM SC", BinaryData::InputTrim_txt, BinaryData::InputTrim_txtSize},  // Mantener por compatibilidad UI
-        {"LOOKAHEAD", BinaryData::Output_txt, BinaryData::Output_txtSize},
+        {"LOOKAHEAD", BinaryData::InputTrim_txt, BinaryData::InputTrim_txtSize},
         // MAXIMIZER: No tiene FILTERS (sin sidechain externo)
         {"DETECTOR", BinaryData::Detector_txt, BinaryData::Detector_txtSize},
         {"GAIN CORE", BinaryData::GainCore_txt, BinaryData::GainCore_txtSize},  // Corregido: era GainCalc
         //{"MAKEUP", BinaryData::Output_txt, BinaryData::Output_txtSize},
         {"OUTPUT", BinaryData::Output_txt, BinaryData::Output_txtSize},
-    //{"DELTA", BinaryData::Output_txt, BinaryData::Output_txtSize}
+        {"DELTA", BinaryData::Output_txt, BinaryData::Output_txtSize}
     };
     
     // Cargar todo en cache
@@ -3387,19 +3478,15 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     juce::String parameterID;
     
     // Perillas Superiores Izquierdas (threshold, ratio, knee)
-    if (&control == &leftTopKnobs.thdSlider) parameterID = "a_THD";
+    if (&control == &leftTopKnobs.thdSlider) parameterID = "a_GAIN";
     else if (&control == &leftTopKnobs.ceilingSlider) parameterID = "b_CELLING";  // NUEVO - ceiling slider
     // MAXIMIZER: c_RATIO no existe - comentado según CONTEXTO.txt
     // else if (&control == &leftTopKnobs.ratioSlider) parameterID = "c_RATIO";
     // MAXIMIZER: q_KNEE no existe - comentado según CONTEXTO.txt
     // else if (&control == &leftTopKnobs.kneeSlider) parameterID = "q_KNEE";
     
-    // Perillas Inferiores Izquierdas (drywet, lookahead, clip, autogain)
-    // MAXIMIZER: o_DRYWET no existe - comentado según CONTEXTO.txt
-    // else if (&control == &leftBottomKnobs.drywetSlider) parameterID = "o_DRYWET";
+    // Lookahead movido a rightTopControls
     else if (&control == &rightTopControls.lookaheadSlider) parameterID = "n_LOOKAHEAD";
-    // MAXIMIZER: u_SOFTCLIP no existe - comentado según CONTEXTO.txt
-    // else if (&control == &leftBottomKnobs.clipSlider) parameterID = "u_SOFTCLIP";  // Corregido: ahora usa mapeo dinámico
     
     // Controles Superiores Derechos (range, react, smooth)
     // MAXIMIZER: h_RANGE no existe - comentado según CONTEXTO.txt
@@ -3424,8 +3511,8 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     
     // Sliders de Trim
     else if (&control == &trimSlider) parameterID = "j_TRIM";  // MAXIMIZER: renombrado de a_TRIM
-    // MAXIMIZER: No tiene makeupSlider ni scTrimSlider
-    // else if (&control == &makeupSlider) parameterID = "i_MAKEUP";
+    // RESTAURADO: makeupSlider para i_MAKEUP
+    else if (&control == &makeupSlider) parameterID = "i_MAKEUP";
     // else if (&control == &scTrimSlider) parameterID = "y_SCTRIM";
     
     // Botones Automatizables
@@ -3436,7 +3523,7 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     // Estos son parámetros globales/utility que no deberían mostrar carriles de automatización
     // MAXIMIZER: soloScButton comentado (no existe)
     // else if (&control == &sidechainControls.soloScButton) return -1;  // m_SOLOSC (no automatizable)
-    else if (&control == &leftBottomKnobs.ditherButton) return -1;      // g_DITHER (no automatizable)
+    else if (&control == &rightBottomKnobs.ditherButton) return -1;      // g_DITHER (no automatizable)
     else if (&control == &rightBottomKnobs.autorelButton) return -1;    // m_AUTOREL (no automatizable)
     else if (&control == &parameterButtons.deltaButton) return -1;      // k_DELTA (no automatizable)
     else if (&control == &parameterButtons.bypassButton) return -1;     // h_BYPASS (no automatizable)

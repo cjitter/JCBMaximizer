@@ -1,16 +1,19 @@
 // =============================================================================
 // OUTPUT BLOCK - Maximizer
 // =============================================================================
-// Procesamiento de salida con modo Delta, Bypass y medición
+// Procesamiento de salida con Delta normalizado, Bypass, Makeup y Dither TPDF
 //
 // ENTRADAS:
 // - in1: Señal L procesada (desde GainProcessor)
 // - in2: Señal R procesada (desde GainProcessor)
 // - in3: Señal L original con delay (desde InputTrim)
 // - in4: Señal R original con delay (desde InputTrim)
-// - in5: Señal L escalada con delay (desde GainProcessor para delta)
-// - in6: Señal R escalada con delay (desde GainProcessor para delta)
+// - in5: Señal L escalada (desde GainProcessor para delta)
+// - in6: Señal R escalada (desde GainProcessor para delta)
 // - in7: Reducción de ganancia lineal (desde GainProcessor)
+// - in8: Ceiling linear (desde GainProcessor)
+// - in9: Trim linear (desde Detector)
+// - in10: Threshold linear (desde Detector)
 //
 // SALIDAS:
 // - out1: Audio L final
@@ -19,16 +22,21 @@
 // =============================================================================
 
 // PARÁMETROS
-Param h_BYPASS(0, min=0, default=0, max=1);    // Bypass del efecto (0-1)
-Param k_DELTA(0, min=0, default=0, max=1);     // Delta mode (0-1)
+Param h_BYPASS(0, min=0, default=0, max=1);        // Bypass del efecto (0-1)
+Param k_DELTA(0, min=0, default=0, max=1);         // Delta mode (0-1)
+Param i_MAKEUP(0, min=-12, default=0, max=12);     // Makeup gain post-proceso (dB)
+Param g_DITHER(0, min=0, default=0, max=1);        // Cantidad de dither (0-1)
 
 // HISTORIAS
 History smoothedBypass(0);       // Suavizado del bypass
 History deltaHistory(0);         // Suavizado del modo delta
+History smoothedMakeup(0);       // Suavizado del makeup gain
+History ditherHistory(0);        // Suavizado del dither
 
 // CONSTANTES
 SMOOTH_HISTORY_FACTOR = 0.999;
 SMOOTH_PARAM_FACTOR = 0.001;
+ditherAmount = 1.5258789062e-05;
 
 // PROCESAMIENTO
 // Suavizado de parámetros
@@ -39,23 +47,49 @@ wetAmount = 1 - smoothedBypass;
 smoothedDelta = deltaHistory * SMOOTH_HISTORY_FACTOR + k_DELTA * SMOOTH_PARAM_FACTOR;
 deltaHistory = fixdenorm(smoothedDelta);
 
-// Modo delta - calcular diferencia
-leftDelta = in5 - in1;    // Diferencia entre escalada y procesada
-rightDelta = in6 - in2;   // Diferencia entre escalada y procesada
+smoothedMakeup = smoothedMakeup * SMOOTH_HISTORY_FACTOR + i_MAKEUP * SMOOTH_PARAM_FACTOR;
+smoothedMakeup = fixdenorm(smoothedMakeup);
+makeupLinear = dbtoa(smoothedMakeup);
+
+smoothedDither = ditherHistory * SMOOTH_HISTORY_FACTOR + g_DITHER * SMOOTH_PARAM_FACTOR;
+ditherHistory = fixdenorm(smoothedDither);
+
+// Aplicar makeup gain
+leftWithMakeup = in1 * makeupLinear;
+rightWithMakeup = in2 * makeupLinear;
+leftProcessed = mix(in1, leftWithMakeup, 1 - smoothedDelta);
+rightProcessed = mix(in2, rightWithMakeup, 1 - smoothedDelta);
+
+// Calcular ganancia total para normalización del delta
+totalGainApplied = in9 * in10;  // trim * threshold
+
+// Modo delta - calcular diferencia normalizada
+leftDelta = (in5 - in1) / (in8 * max(totalGainApplied, 1));
+rightDelta = (in6 - in2) / (in8 * max(totalGainApplied, 1));
 
 // Aplicar modo delta
-leftWithDelta = mix(in1, leftDelta, smoothedDelta);
-rightWithDelta = mix(in2, rightDelta, smoothedDelta);
+leftWithDelta = mix(leftProcessed, leftDelta, smoothedDelta);
+rightWithDelta = mix(rightProcessed, rightDelta, smoothedDelta);
 
 // Aplicar bypass
 leftFinal = mix(in3, leftWithDelta, wetAmount);
 rightFinal = mix(in4, rightWithDelta, wetAmount);
+
+// TPDF dither
+noise1 = noise() * ditherAmount * 0.5;
+noise2 = noise() * ditherAmount * 0.5;
+ditherTPDF = noise1 + noise2;
+ditherGated = gate(smoothedDither, ditherTPDF);
+
+// Aplicar dither como último paso
+out1 = leftFinal + ditherGated;
+out2 = rightFinal + ditherGated;
 
 // Gain reduction para medidor
 gainReductionMeter = mix(1, in7, wetAmount);
 gainReductionOutput = clamp(gainReductionMeter, 0, 1);
 
 // SALIDAS
-out1 = leftFinal;            // Audio L final
-out2 = rightFinal;           // Audio R final
-out3 = gainReductionOutput;  // Gain reduction (0-1)
+out1 = leftFinal + ditherGated;      // Audio L final con dither
+out2 = rightFinal + ditherGated;     // Audio R final con dither
+out3 = gainReductionOutput;          // Gain reduction (0-1)

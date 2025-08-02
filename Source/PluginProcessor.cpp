@@ -434,15 +434,15 @@ void JCBMaximizerAudioProcessor::updateGainReductionMeter()
     const int numSamples = grBuffer.getNumSamples();
     t_sample* grData = m_OutputBuffers[2]; // out3 = gain reduction (valores lineales)
     
-    // NUEVO: Replicar exactamente Max: outlet 3 → average~ 4800 1 → linear2db → slider
+    // ULTRA-OPTIMIZADO: outlet 3 → average~ 1200 1 → linear2db → slider (era 4800→2400, ahora ultra-responsivo)
     float finalAveragedLinear = 1.0f; // Inicializar a 1.0 (sin reducción)
     
     // Verificar si hay muestras para procesar
     if (numSamples > 0 && grData != nullptr) {
-        // Procesar cada muestra con promedio móvil de 4800 muestras (modo absoluto)
+        // Procesar cada muestra con promedio móvil de 1200 muestras (modo absoluto, ultra-responsivo)
         for (int i = 0; i < numSamples; ++i) {
             float grLinear = static_cast<float>(grData[i]);
-            // Aplicar promedio móvil con modo absoluto (average~ 4800 1)
+            // Aplicar promedio móvil con modo absoluto (average~ 1200 1)
             finalAveragedLinear = grMovingAverage.processSample(grLinear);
         }
     } else {
@@ -666,21 +666,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
    const int versionHint = 21;
    std::vector <std::unique_ptr<juce::RangedAudioParameter>> params;
 
-   // a_THD @min -20 @max 0 @default 0 (Maximizer: rango más estrecho)
-   auto thd = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("a_THD", versionHint),
-                                                          juce::CharPointer_UTF8("Threshold"),
-                                                          juce::NormalisableRange<float>(-20.f, 0.f, 0.1f, 1.0f),
+   // a_GAIN @min 0 @max 24 @default 0 (Maximizer: ahora a_GAIN, antes a_THD, con valores positivos)
+   auto thd = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("a_GAIN", versionHint),
+                                                          juce::CharPointer_UTF8("Gain"),
+                                                          juce::NormalisableRange<float>(0.f, 24.f, 0.1f, 1.0f),
                                                           0.f);
 
-   // b_CELLING @min -60 @max 0 @default 0 (NUEVO - específico del Maximizer)
+   // b_CELLING @min -60 @max 0 @default -0.3 (NUEVO - específico del Maximizer)
    auto ceiling = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("b_CELLING", versionHint),
                                                               juce::CharPointer_UTF8("Ceiling"),
                                                               juce::NormalisableRange<float>(-60.f, 0.f, 0.1f, 1.0f),
-                                                              0.f);
+                                                              -0.3f);
 
-   // d_ATK @min 0.01 @max 500 @default 1 (mantener mapeo exponencial)
+   // d_ATK @min 0.01 @max 750 @default 100 (mantener mapeo exponencial)
    auto atkRange = juce::NormalisableRange<float>(
-       0.01f, 500.f,
+       0.01f, 750.f,
        [](float start, float end, float normalised) {
            return start + (end - start) * std::pow(normalised, 1.8f);
        },
@@ -699,7 +699,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
        juce::ParameterID("d_ATK", versionHint),
        juce::CharPointer_UTF8("Attack"),
        atkRange,
-       1.0f,
+       100.0f,
        juce::String(),
        juce::AudioParameterFloat::genericParameter,
        [](float value, int){
@@ -712,9 +712,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
        },
        nullptr);
 
-   // e_REL @min 1 @max 1500 @default 50 (cambiar rango y default para Maximizer)
+   // e_REL @min 1 @max 1000 @default 200 (cambiar rango y default para Maximizer)
    auto relRange = juce::NormalisableRange<float>(
-       1.f, 750.f,
+       1.f, 1000.f,
        [](float start, float end, float normalised) {
            return start + (end - start) * std::pow(normalised, 1.4f);
        },
@@ -733,7 +733,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
        juce::ParameterID("e_REL", versionHint),
        juce::CharPointer_UTF8("Release"),
        relRange,
-       50.0f,  // Cambiar default de 120 a 50
+       200.0f,  // Cambiar default de 120 a 200
        juce::String(),
        juce::AudioParameterFloat::genericParameter,
        [](float value, int){
@@ -767,6 +767,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
                                                            0, 1, 0,
                                                            juce::AudioParameterIntAttributes().withAutomatable(false).withCategory(juce::AudioProcessorParameter::genericParameter));
 
+   // i_MAKEUP @min -12 @max 12 @default 0 (POST processing makeup gain)
+   auto makeup = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("i_MAKEUP", versionHint),
+                                                             juce::CharPointer_UTF8("Makeup"),
+                                                             juce::NormalisableRange<float>(-12.f, 12.f, 0.1f, 1.f),
+                                                             0.f);
+
    // j_TRIM @min -12 @max 12 @default 0 (renombrado de a_TRIM)
    auto trim = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("j_TRIM", versionHint),
                                                            juce::CharPointer_UTF8("Input Trim"),
@@ -780,11 +786,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
        0, 1, 0,
        juce::AudioParameterIntAttributes().withAutomatable(false).withCategory(juce::AudioProcessorParameter::genericParameter));
 
-   // l_DETECT @min 0 @max 1 @default 0 (NUEVO - Detection mode Peak/RMS)
+   // l_DETECT @min 0 @max 1 @default 1 (NUEVO - Detection mode Peak/RMS, corregido a RMS por defecto)
    auto detect = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("l_DETECT", versionHint),
                                                              juce::CharPointer_UTF8("Detection"),
                                                              juce::NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
-                                                             0.f,
+                                                             1.f,  // Default corregido: 0 → 1 (RMS)
                                                              juce::String(),
                                                              juce::AudioParameterFloat::genericParameter,
                                                              [](float value, int){
@@ -812,11 +818,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
                                                               },
                                                               nullptr);
 
-   // n_LOOKAHEAD @min 0 @max 5 @default 2 (cambiar rango y default para Maximizer)
+   // n_LOOKAHEAD @min 0 @max 5 @default 0 (corregido a especificación del usuario)
    auto lookahead = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("n_LOOKAHEAD", versionHint),
                                                                 juce::CharPointer_UTF8("Lookahead"),
                                                                 juce::NormalisableRange<float>(0.f, 5.f, 0.1f, 1.f),
-                                                                2.f);  // Default cambiado de 0 a 2
+                                                                0.f);  // Default corregido: 2 → 0
 
    // Añadir parámetros en orden alfabético (exactamente como Gen~)
    params.push_back(std::move(thd));            // a_THD
@@ -825,6 +831,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
    params.push_back(std::move(rel));            // e_REL
    params.push_back(std::move(dither));         // g_DITHER
    params.push_back(std::move(bypass));         // h_BYPASS
+   params.push_back(std::move(makeup));         // i_MAKEUP
    params.push_back(std::move(trim));           // j_TRIM
    params.push_back(std::move(delta));          // k_DELTA
    params.push_back(std::move(detect));         // l_DETECT

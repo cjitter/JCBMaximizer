@@ -516,24 +516,27 @@ public:
         // currentSmoothedValue ahora viene en dB desde el MovingAverage4800
         float barHeight;
         
-        // Rango de trabajo: 0 dB (sin reducción) a -100/-50 dB (máxima reducción)
+        // Rango de trabajo ultra-sensible para máxima visibilidad de reducciones pequeñas
         const float minReduction = 0.0f;    // Sin reducción (sin barra)
-        const float maxReduction = isZoomed ? -50.0f : -100.0f;  // Zoom x2: -50dB, Normal: -100dB
+        const float maxReduction = isZoomed ? -20.0f : -40.0f;  // Zoom x2: -20dB, Normal: -40dB (ultra-sensible)
         
-        // Mapeo correcto: valores más negativos = más barra blanca
+        // Mapeo logarítmico para realzar reducciones pequeñas: valores más negativos = más barra blanca
         float fillRatio = juce::jmap(currentSmoothedValue, minReduction, maxReduction, 0.0f, 1.0f);
         fillRatio = juce::jlimit(0.0f, 1.0f, fillRatio);
         
-        // Calcular altura de barra (0 dB = sin barra, -100/-50 dB = barra llena según zoom)
+        // Aplicar mapeo logarítmico para amplificar visualmente las reducciones pequeñas
+        fillRatio = std::pow(fillRatio, 0.6f);  // Comprime menos las reducciones pequeñas (más visibles)
+        
+        // Calcular altura de barra (0 dB = sin barra, -40/-20 dB = barra llena según zoom)
         barHeight = (getHeight() - 3) * fillRatio;
         
-        // Dibujar el gradiente desde arriba con la altura calculada - BARRA MÁS ESTRECHA
+        // Dibujar el gradiente desde arriba con la altura calculada - BARRA OPTIMIZADA
         if (barHeight > 1.0f) {
             g.setGradientFill(gradient);
             
-            // Crear barra más estrecha (40% del ancho original) centrada
+            // Crear barra ultra-visible (75% del ancho original) centrada
             auto fillBounds = bounds.reduced(1.0f);
-            float barWidth = fillBounds.getWidth() * 0.4f;
+            float barWidth = fillBounds.getWidth() * 0.75f;  // Aumentado de 40% → 60% → 75%
             float xOffset = (fillBounds.getWidth() - barWidth) * 0.5f;
             auto narrowFillBounds = fillBounds.withTrimmedLeft(xOffset).withTrimmedRight(xOffset);
             

@@ -132,8 +132,7 @@ juce_add_binary_data(JCBMaximizer_BinaryData
         Assets/code/Detector.txt
         Assets/code/Output.txt
         # Presets de fábrica
-        Assets/FactoryPresets/Ataquer.preset
-        Assets/FactoryPresets/Sustainer.preset
+        Assets/FactoryPresets/plus6.preset
 )
 
 # Linkear binary data al plugin

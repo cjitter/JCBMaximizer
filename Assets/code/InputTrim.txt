@@ -12,19 +12,23 @@
 // - out2: R con trim y delay
 // - out3: L con trim sin delay (para detección)
 // - out4: R con trim sin delay (para detección)
+// - out5: L original con delay (para bypass sin trim)
+// - out6: R original con delay (para bypass sin trim)
 // =============================================================================
 
 // PARÁMETROS
 Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)
-Param n_LOOKAHEAD(0, min=0, default=2, max=5);     // Lookahead time (ms)
+Param n_LOOKAHEAD(0, min=0, default=0, max=5);     // Lookahead time (ms)
 
 // HISTORIAS
 History trimHistory(0);          // Para suavizado del trim
 History lookaheadHistory(0);     // Para suavizado del lookahead
 
 // DELAYS
-Delay leftOutputDelay(samplerate);     // Delay señal izquierda
-Delay rightOutputDelay(samplerate);    // Delay señal derecha
+Delay leftOutputDelay(samplerate);      // Delay señal izquierda con trim
+Delay rightOutputDelay(samplerate);     // Delay señal derecha con trim
+Delay leftInputDelay(samplerate);       // Delay señal izquierda sin trim
+Delay rightInputDelay(samplerate);      // Delay señal derecha sin trim
 
 // CONSTANTES
 SMOOTH_HISTORY_FACTOR = 0.999;
@@ -40,7 +44,7 @@ trimGainLinear = dbtoa(smoothedTrim);
 // Suavizado del lookahead
 smoothedLookahead = lookaheadHistory * LOOKAHEAD_SMOOTH_FACTOR + n_LOOKAHEAD * (1 - LOOKAHEAD_SMOOTH_FACTOR);
 lookaheadHistory = fixdenorm(smoothedLookahead);
-lookaheadSamples = mstosamps(smoothedLookahead);
+lookaheadSamples = int(smoothedLookahead * 0.001 * samplerate);
 
 // Aplicar trim
 leftTrimmed = in1 * trimGainLinear;
@@ -49,13 +53,19 @@ rightTrimmed = in2 * trimGainLinear;
 // Leer señales retrasadas
 leftDelayed = leftOutputDelay.read(lookaheadSamples, interp="linear");
 rightDelayed = rightOutputDelay.read(lookaheadSamples, interp="linear");
+leftOriginalDelayed = leftInputDelay.read(lookaheadSamples, interp="linear");
+rightOriginalDelayed = rightInputDelay.read(lookaheadSamples, interp="linear");
 
 // Escribir en delays
 leftOutputDelay.write(leftTrimmed);
 rightOutputDelay.write(rightTrimmed);
+leftInputDelay.write(in1);    // Original sin trim
+rightInputDelay.write(in2);   // Original sin trim
 
 // SALIDAS
-out1 = leftDelayed;       // L con delay
-out2 = rightDelayed;      // R con delay
-out3 = leftTrimmed;       // L sin delay (para detección)
-out4 = rightTrimmed;      // R sin delay (para detección)
+out1 = leftDelayed;           // L con trim y delay
+out2 = rightDelayed;          // R con trim y delay
+out3 = leftTrimmed;           // L con trim sin delay (para detección)
+out4 = rightTrimmed;          // R con trim sin delay (para detección)
+out5 = leftOriginalDelayed;  // L original con delay (para bypass)
+out6 = rightOriginalDelayed; // R original con delay (para bypass)

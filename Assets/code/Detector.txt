@@ -11,18 +11,22 @@
 // - out1: Envolvente en dB para cálculo de ganancia
 // - out2: Señal escalada L (para modo delta)
 // - out3: Señal escalada R (para modo delta)
+// - out4: Ceiling suavizado en dB
+// - out5: Trim linear (para normalización delta)
+// - out6: Threshold linear (para normalización delta)
 // =============================================================================
 
 // PARÁMETROS
-Param b_CELLING(0, min=-60, default=0, max=0);     // Techo máximo en dB
-Param a_THD(0, min=-20, default=0, max=0);         // Umbral de limitación en dB
-Param d_ATK(0, min=0.01, default=1, max=500);      // Tiempo de ataque en ms
-Param e_REL(0, min=1, default=50, max=1500);       // Tiempo de release en ms
+Param b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB
+Param a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB) - moderno
+Param d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms
+Param e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms
 Param l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)
 Param m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)
+Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim (para calcular normalización)
 
 // HISTORIAS
-History smoothedThreshold(0);    // Suavizado del umbral
+History smoothedGain(0);         // Suavizado del gain
 History smoothedCeiling(0);      // Suavizado del techo
 History envelopeFollower(0);     // Seguidor de envolvente
 History gainReduction(0);        // Reducción de ganancia actual
@@ -41,9 +45,9 @@ SMOOTH_PARAM_FACTOR = 0.001;
 expConstant = -0.99967234081321;
 
 // PROCESAMIENTO
-// Suavizado de threshold y ceiling
-smoothedThreshold = smoothedThreshold * SMOOTH_HISTORY_FACTOR + a_THD * SMOOTH_PARAM_FACTOR;
-smoothedThreshold = fixdenorm(smoothedThreshold);
+// Suavizado del gain (conversión a threshold negativo)
+smoothedGain = smoothedGain * SMOOTH_HISTORY_FACTOR + (-a_GAIN) * SMOOTH_PARAM_FACTOR;
+smoothedGain = fixdenorm(smoothedGain);
 
 smoothedCeiling = smoothedCeiling * SMOOTH_HISTORY_FACTOR + b_CELLING * SMOOTH_PARAM_FACTOR;
 smoothedCeiling = fixdenorm(smoothedCeiling);
@@ -57,7 +61,8 @@ autoReleaseHistory = fixdenorm(smoothedAutoRelease);
 
 // Conversión a lineal
 ceilingLinear = dbtoa(b_CELLING);
-thresholdLinear = 1 / pow(10, smoothedThreshold / 20);
+thresholdLinear = 1 / pow(10, smoothedGain / 20);
+trimLinear = dbtoa(j_TRIM);
 
 // Aplicar ceiling y threshold a las entradas
 rightScaled = ceilingLinear * in2 * thresholdLinear;
@@ -132,3 +137,5 @@ out1 = gainReductionDb;     // Envolvente en dB
 out2 = leftScaled;          // Señal L escalada para delta
 out3 = rightScaled;         // Señal R escalada para delta
 out4 = smoothedCeiling;     // Ceiling suavizado para GainCalc
+out5 = trimLinear;          // Trim linear para normalización
+out6 = thresholdLinear;     // Threshold linear para normalización

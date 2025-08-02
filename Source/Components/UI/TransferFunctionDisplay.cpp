@@ -524,14 +524,14 @@ float TransferFunctionDisplay::calculateKneeOutput(float inputDb, float threshol
 
 float TransferFunctionDisplay::calculateGainOutput(float inputDb)
 {
-    // NUEVA FUNCIÓN: Solo aplicar THD como gain/drive (sin limitación)
-    // Esto genera la línea roja paralela que muestra el efecto del THD
+    // NUEVA FUNCIÓN: Solo aplicar a_GAIN como gain/drive (sin limitación)
+    // Esto genera la línea roja paralela que muestra el efecto del GAIN
     inputDb = juce::jlimit(-100.0f, 0.0f, inputDb);
     
-    // LÓGICA CORREGIDA: THD negativo significa menos gain, por lo que la línea debe subir
-    // THD = -10 dB → línea sube 10 dB para compensar la reducción de ganancia
-    // THD = +5 dB → línea baja 5 dB para mostrar el aumento de ganancia
-    return inputDb - threshold;  // Invertir signo: THD negativo → línea sube
+    // LÓGICA ADAPTADA PARA a_GAIN: valores positivos significan más gain
+    // GAIN = +10 dB → línea sube 10 dB para mostrar el aumento de ganancia
+    // GAIN = 0 dB → línea sin cambio (igual a entrada)
+    return inputDb + threshold;  // Ahora threshold es positivo, sumar directamente
 }
 
 float TransferFunctionDisplay::calculateLimitedOutput(float inputDb)
@@ -540,8 +540,8 @@ float TransferFunctionDisplay::calculateLimitedOutput(float inputDb)
     // Esto genera la línea que muestra el comportamiento completo del maximizer
     inputDb = juce::jlimit(-100.0f, 0.0f, inputDb);
     
-    // 1. Aplicar THD como gain/drive
-    float gainOutput = inputDb - threshold;
+    // 1. Aplicar a_GAIN como gain/drive
+    float gainOutput = inputDb + threshold;
     
     // 2. Aplicar limitación del ceiling con soft-knee cuadrático
     if (knee <= 0.0f)
@@ -1597,21 +1597,24 @@ void TransferFunctionDisplay::drawDeltaGainReduction(juce::Graphics& g, juce::Re
     g.setColour(DarkTheme::accent.withAlpha(0.4f * currentFadeOutFactor));
     g.fillPath(dashPath);
     
-    // Usar misma lógica que grMeter - siempre procesar (no solo con > 0.1f)
-    // COPIA EXACTA de la implementación del grMeter (líneas 508-516 GradientMeter.h)
+    // SINCRONIZADO con grMeter optimizado - usar misma lógica ultra-sensible
+    // Rango dinámico, mapeo logarítmico y zoom sincronizados para consistencia visual total
     
-    // Rango de trabajo: 0 dB (sin reducción) a -100 dB (máxima reducción) - IGUAL QUE grMeter
+    // Rango de trabajo ultra-sensible sincronizado con grMeter optimizado
     const float minReduction = 0.0f;    // Sin reducción (sin área)
-    const float maxReduction = -100.0f;  // Máxima reducción (área completa)
+    const float maxReduction = (currentZoom == ZoomLevel::Zoomed) ? -20.0f : -40.0f;  // Zoom x2: -20dB, Normal: -40dB
     
-    // Mapeo correcto: valores más negativos = más área verde (IGUAL QUE grMeter)
+    // Mapeo logarítmico para realzar reducciones pequeñas: valores más negativos = más área verde
     float fillRatio = juce::jmap(grValue, minReduction, maxReduction, 0.0f, 1.0f);
     fillRatio = juce::jlimit(0.0f, 1.0f, fillRatio);
+    
+    // Aplicar mapeo logarítmico para amplificar visualmente las reducciones pequeñas (sincronizado con grMeter)
+    fillRatio = std::pow(fillRatio, 0.6f);  // Comprime menos las reducciones pequeñas (más visibles)
     
     // Altura disponible para la visualización (desde la línea de referencia hacia abajo)
     float availableHeight = bounds.getHeight() - topOffset - 2.0f; // Margen inferior reducido para mayor altura
     
-    // Calcular altura de área (0 dB = sin área, -100 dB = área completa) - IGUAL QUE grMeter
+    // Calcular altura de área (0 dB = sin área, -40/-20 dB = área completa según zoom) - SINCRONIZADO CON grMeter
     float barHeight = availableHeight * fillRatio;
     
     // Siempre partir desde la línea de referencia hacia abajo
@@ -1677,13 +1680,15 @@ void TransferFunctionDisplay::drawDeltaGainReductionHistory(juce::Graphics& g, j
         float normalizedTime = float(i) / float(deltaHistorySize - 1);
         float x = bounds.getX() + normalizedTime * bounds.getWidth();
         
-        // Posición Y - mapear gain reduction usando misma lógica que área estática
-        // Usar rango fijo -100dB como el grMeter
-        constexpr float minReduction = 0.0f;    // Sin reducción (parte superior)
-        constexpr float maxReduction = -100.0f;  // Máxima reducción (parte inferior)
+        // Posición Y - mapear gain reduction usando rango ultra-sensible sincronizado con grMeter
+        const float minReduction = 0.0f;    // Sin reducción (parte superior)
+        const float maxReduction = (currentZoom == ZoomLevel::Zoomed) ? -20.0f : -40.0f;  // Sincronizado con grMeter
         
         float fillRatio = juce::jmap(grDb, minReduction, maxReduction, 0.0f, 1.0f);
         fillRatio = juce::jlimit(0.0f, 1.0f, fillRatio);
+        
+        // Aplicar mapeo logarítmico para consistencia con grMeter y área estática
+        fillRatio = std::pow(fillRatio, 0.6f);
         
         // Y desde arriba hacia abajo (como área estática)
         float y = bounds.getY() + fillRatio * bounds.getHeight();

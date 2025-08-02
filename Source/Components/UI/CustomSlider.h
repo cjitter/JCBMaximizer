@@ -267,7 +267,7 @@ public:
             if (name == "react" || id == "react") return "REACT";
             if (name == "hpf" || id == "hpf") return "HPF";
             if (name == "lpf" || id == "lpf") return "LPF";
-            if (name == "thd" || id == "thd") return "THD";
+            if (name == "thd" || id == "thd") return "GAIN";
             if (name == "ratio" || id == "ratio") return "RATIO";
             if (name == "range" || id == "range") return "RANGE";
             if (name == "knee" || id == "knee") return "KNEE";

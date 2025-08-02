@@ -108,7 +108,7 @@ private:
     // CONSTANTES Y VARIABLES MIEMBRO
     //==========================================================================
     
-    static constexpr int BUFFER_SIZE = 4800;    // Tamaño fijo del buffer (como Max)
+    static constexpr int BUFFER_SIZE = 1200;    // Tamaño ultra-responsivo para máxima sensibilidad (era 4800→2400)
     
     std::vector<float> buffer;                  // Buffer circular de muestras
     int writeIndex;                             // Índice de escritura actual

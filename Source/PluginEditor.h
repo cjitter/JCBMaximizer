@@ -130,6 +130,16 @@ private:
             float fontSize = static_cast<float>(buttonHeight) * 0.6f;
             return juce::Font(juce::FontOptions(fontSize)).withStyle(juce::Font::bold);
         }
+        
+        void drawButtonBackground(juce::Graphics& g, juce::Button& button, 
+                                const juce::Colour& backgroundColour,
+                                bool shouldDrawButtonAsHighlighted,
+                                bool shouldDrawButtonAsDown) override
+        {
+            // Dibujar solo fondo sin bordes
+            g.setColour(backgroundColour);
+            g.fillRoundedRectangle(button.getLocalBounds().toFloat(), 3.0f);
+        }
     };
     
     //==========================================================================
@@ -143,7 +153,7 @@ private:
         
         void parameterChanged(const juce::String& parameterID, float /*newValue*/) override
         {
-            if (parameterID == "a_THD" || parameterID == "b_CELLING")
+            if (parameterID == "a_GAIN" || parameterID == "b_CELLING")
             {
                 // Usar SafePointer para thread safety
                 juce::Component::SafePointer<JCBMaximizerAudioProcessorEditor> safeEditor(editor);
@@ -151,6 +161,51 @@ private:
                 juce::MessageManager::callAsync([safeEditor]() {
                     if (safeEditor)
                         safeEditor->updateTransferDisplay();
+                });
+            }
+        }
+        
+        JCBMaximizerAudioProcessorEditor* editor;
+    };
+    
+    // Parameter listener para actualizar alpha del REL slider cuando AUTOREL cambia
+    struct AutorelParameterListener : public juce::AudioProcessorValueTreeState::Listener
+    {
+        AutorelParameterListener(JCBMaximizerAudioProcessorEditor* e) : editor(e) {}
+        
+        void parameterChanged(const juce::String& parameterID, float /*newValue*/) override
+        {
+            if (parameterID == "m_AUTOREL")
+            {
+                // Usar SafePointer para thread safety
+                juce::Component::SafePointer<JCBMaximizerAudioProcessorEditor> safeEditor(editor);
+                
+                juce::MessageManager::callAsync([safeEditor]() {
+                    if (safeEditor)
+                        safeEditor->updateRelSliderAlpha();
+                });
+            }
+        }
+        
+        JCBMaximizerAudioProcessorEditor* editor;
+    };
+    
+    // Parameter listener para manejar cambios de DELTA y sincronizar estado de UI
+    struct DeltaParameterListener : public juce::AudioProcessorValueTreeState::Listener
+    {
+        DeltaParameterListener(JCBMaximizerAudioProcessorEditor* e) : editor(e) {}
+        
+        void parameterChanged(const juce::String& parameterID, float newValue) override
+        {
+            if (parameterID == "k_DELTA")
+            {
+                // Usar SafePointer para thread safety
+                juce::Component::SafePointer<JCBMaximizerAudioProcessorEditor> safeEditor(editor);
+                bool deltaActive = newValue >= 0.5f;
+                
+                juce::MessageManager::callAsync([safeEditor, deltaActive]() {
+                    if (safeEditor)
+                        safeEditor->applyDeltaModeToAllControls(deltaActive);
                 });
             }
         }
@@ -183,9 +238,9 @@ private:
     
     // Sliders de Trim que se superponen a los medidores
     TrimSlider trimSlider;      // Slider único para ambos canales L/R
-    // MAXIMIZER: i_MAKEUP no existe - makeupSlider eliminado según CONTEXTO.txt
+    TrimSlider makeupSlider;    // RESTAURADO: i_MAKEUP - Makeup gain POST procesador
     std::unique_ptr<CustomSliderAttachment> trimAttachment;
-    // MAXIMIZER: makeupAttachment eliminado - parámetro inexistente
+    std::unique_ptr<CustomSliderAttachment> makeupAttachment;  // RESTAURADO: para i_MAKEUP
     
     // MAXIMIZER: No sidechain trim - removed scTrimSlider and scTrimAttachment
     
@@ -209,16 +264,6 @@ private:
         // MAXIMIZER: ratioAttachment y kneeAttachment eliminados - parámetros inexistentes
     } leftTopKnobs;
 
-    // Controles izquierdos - fila inferior
-    struct LeftBottomKnobs {
-        // MAXIMIZER: o_DRYWET y u_SOFTCLIP no existen - eliminados según CONTEXTO.txt
-        // MAXIMIZER: lookaheadSlider movido a RightTopControls para mejor distribución visual
-        juce::TextButton ditherButton{"DITHER"};  // NUEVO - parámetro g_DITHER
-        
-        // MAXIMIZER: drywetAttachment y clipAttachment eliminados - parámetros inexistentes
-        // MAXIMIZER: lookaheadAttachment movido a RightTopControls
-        std::unique_ptr<UndoableButtonAttachment> ditherAttachment;  // NUEVO - attachment para g_DITHER
-    } leftBottomKnobs;
     
     // Controles derechos - fila superior
     struct RightTopControls {
@@ -236,11 +281,13 @@ private:
         CustomSlider atkSlider{"attack"};
         CustomSlider relSlider{"release"};
         juce::TextButton autorelButton{"AUTOREL"};  // NUEVO - parámetro m_AUTOREL
+        juce::TextButton ditherButton{"DITHER"};  // MOVIDO desde LeftBottomKnobs para consistencia con posición visual
         // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
         
         std::unique_ptr<CustomSliderAttachment> atkAttachment;
         std::unique_ptr<CustomSliderAttachment> relAttachment;
         std::unique_ptr<UndoableButtonAttachment> autorelAttachment;  // NUEVO - attachment para m_AUTOREL
+        std::unique_ptr<UndoableButtonAttachment> ditherAttachment;  // MOVIDO desde LeftBottomKnobs para consistencia con posición visual
         // MAXIMIZER: holdAttachment eliminado - parámetro inexistente
     } rightBottomKnobs;
     
@@ -672,21 +719,21 @@ private:
             // Áreas clickables en coordenadas del sistema de referencia
             cachedClickableAreas = {
                 // Sección de entrada
-                {"TRIM IN", 77.8f, 60.0f, 55.6f, 25.0f},
+                {"TRIM IN", 75.f, 87.f, 55.6f, 33.0f},
                 //{"TRIM SC", 77.8f, 122.2f, 55.6f, 30.6f},
                 
                 // Procesamiento principal
-                {"LOOKAHEAD", 177.8f, 16.7f, 416.7f, 13.9f},
+                {"LOOKAHEAD", 170.8f, 16.7f, 430.7f, 13.9f},
                 //{"FILTERS", 192.8f, 100.0f, 52.8f, 69.4f},
-                {"DETECTOR", 250.0f, 100.0f, 59.4f, 69.4f},
+                {"DETECTOR", 215.0f, 112.0f, 120.0f, 57.0f},
                 //{"GAIN CALC", 316.1f, 100.0f, 55.6f, 69.4f},
-                {"GAIN CORE", 322.2f, 50.0f, 44.4f, 41.7f},
+                {"GAIN CORE", 335.2f, 50.0f, 97.0f, 45.0f},
                 
                 // Sección de salida
                 //{"MAKEUP", 468.0f, 54.4f, 50.4f, 33.3f},
                 //{"PARALLEL", 461.1f, 54.4f, 76.1f, 33.3f},
-                {"OUTPUT", 540.0f, 54.4f, 82.2f, 33.3f}
-                //{"DELTA", 519.4f, 115.6f, 47.8f, 29.4f}
+                {"OUTPUT", 540.0f, 54.4f, 82.2f, 33.3f},
+                {"DELTA", 480.4f, 110.6f, 47.8f, 40.4f}
             };
             
             clickableAreasCached = true;
@@ -715,7 +762,7 @@ private:
             else if (blockName == "TRIM IN" || blockName == "TRIM SC")
                 return DarkTheme::textSecondary;  // Gris claro (controles de nivel)
             else if (blockName == "DELTA")
-                return juce::Colour(0xFF1DB954);  // Verde para modo DELTA
+                return DarkTheme::accent;  // Azul (mismo que GAIN CORE, OUTPUT, LOOKAHEAD)
             else
                 return juce::Colours::lightblue;  // Fallback al color original
         }
@@ -816,6 +863,16 @@ private:
     void updateBackgroundState();
     void updateFilterButtonText();
     void updateMeterStates();
+    
+    //==========================================================================
+    // MÉTODOS DE MANEJO DE DELTA MODE
+    //==========================================================================
+    void applyDeltaModeToAllControls(bool deltaActive);
+    void applyDeltaModeToPresetControls(bool deltaActive);
+    void applyDeltaModeToAbControls(bool deltaActive);
+    void applyDeltaModeToUndoRedoControls(bool deltaActive);
+    void applyDeltaModeToUtilityControls(bool deltaActive);
+    void applyDeltaModeToMetersAndDisplay(bool deltaActive);
     void updateTransferDisplay();
     void updateMeters();
     void updateSliderValues();
@@ -928,6 +985,8 @@ private:
     
     // Listeners especializados
     std::unique_ptr<TransferFunctionParameterListener> transferFunctionListener;
+    std::unique_ptr<AutorelParameterListener> autorelParameterListener;
+    std::unique_ptr<DeltaParameterListener> deltaParameterListener;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JCBMaximizerAudioProcessorEditor)
 };
