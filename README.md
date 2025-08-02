@@ -1,10 +1,9 @@
+![JCBMaximizer Interface](Assets/screenshot.png)
 
-![JCBTransient Interface](Assets/screenshot.png)
-
-Plugin de diseño de transitorios desarrollado en gen~, exportado con [gen~ Plugin Export](https://github.com/Cycling74/gen-plugin-export) y finalizado con el framework C++ [JUCE](https://github.com/juce-framework/JUCE). Este plugin forma parte de un conjunto de herramientas didácticas que utilizo en la asignatura de Técnicas de Grabación y Masterización para Música Electroacústica del [MCE](https://katarinagurska.com/curso-of/master-de-composicion-electroacustica-mce/). Originalmente creado con JUCE 6 hace unos años, el proyecto ha evolucionado significativamente en su interfaz gráfica y funcionalidad gracias al desarrollo con Claude Code durante junio de 2025. Para más detalles técnicos, consulta [NOTAS.md](NOTAS.md).
+Plugin maximizador desarrollado en gen~, exportado con [gen~ Plugin Export](https://github.com/Cycling74/gen-plugin-export) y finalizado con el framework C++ [JUCE](https://github.com/juce-framework/JUCE). Este plugin forma parte de un conjunto de herramientas didácticas que utilizo en la asignatura de Técnicas de Grabación y Masterización para Música Electroacústica del [MCE](https://katarinagurska.com/curso-of/master-de-composicion-electroacustica-mce/). Originalmente creado con JUCE 6 hace unos años, el proyecto ha evolucionado significativamente en su interfaz gráfica y funcionalidad gracias al desarrollo con Claude Code durante junio de 2025. Para más detalles técnicos, consulta [NOTAS.md](NOTAS.md).
 
 ## Instalación macOS
-1. Descarga el archivo DMG desde la página de [Releases](https://github.com/cjitter/JCBTransient/releases)
+1. Descarga el archivo DMG desde la página de [Releases](https://github.com/cjitter/JCBMaximizer/releases)
 2. Abre el DMG y ejecuta el instalador
 3. El instalador colocará automáticamente los tipos de plugins seleccionados en las ubicaciones correctas del sistema:
    - VST3: `/Library/Audio/Plug-Ins/VST3/`
@@ -31,8 +30,8 @@ Plugin de diseño de transitorios desarrollado en gen~, exportado con [gen~ Plug
 
 1. Clona el repositorio:
 ```bash
-git clone https://github.com/cjitter/JCBTransient.git
-cd JCBTransient
+git clone https://github.com/cjitter/JCBMaximizer.git
+cd JCBMaximizer
 ```
 
 2. **Configuración del proyecto**:
@@ -62,22 +61,20 @@ cmake --build build-release   # Para Release
 
 ## Características principales
 
-- **Diseñador de transitorios** con control independiente de ataque y sustain, ambos en ±18 dB.
-- **Control de sensibilidad** (0–100%) para la detección de transitorios.
-- **Modo Delta activable** para escuchar únicamente la diferencia entre señal procesada y original (ganancia/reducción aplicada).
-- **Delta Mode (TRANS/SUST)**: selecciona qué parte del procesamiento (ataque o sustain) se escucha en modo Delta. Este modo se activa solo cuando Delta está ON.
-- **Parámetro Delta automatizable**, guardado en presets (no es un parámetro global).
-- **Envolvente configurable** con parámetros de ataque, hold, release y suavizado.
-- **Filtro sidechain** interno y externo con HPF y LPF variables (20 Hz – 20 kHz).
+- **Maximizador con limitador brickwall** y techo ajustable de -60 a 0 dB.
+- **Control de ganancia moderno** de 0 a +24 dB (sin threshold negativo).
+- **Detección conmutable Peak/RMS** con ventana deslizante de 3ms.
+- **Auto-release adaptativo** que ajusta dinámicamente entre 5-150ms según el contenido.
+- **Modo Delta inteligente** normalizado para escuchar exactamente qué está limitando, independiente del ceiling.
+- **Control de envolvente** con tiempos de ataque (0.01-750ms) y release (1-1000ms).
+- **Lookahead ajustable** de 0 a 5 ms para anticipar picos.
 - **Control de entrada y salida** (trim y makeup) ±12 dB.
-- **Modo lookahead** de 0 a 10 ms para evitar overshooting.
-- **Softclip de salida** con distorsión armónica suave.
-- **Mezcla Dry/Wet** de 0 a 100% entre señal original y procesada.
+- **TPDF dither de 16 bits** aplicado como última etapa antes de la salida.
+- **Función soft knee limiter** interna (actualmente configurada como hard knee).
 - **Procesamiento exclusivamente estéreo**, con canales siempre vinculados.
-- **Visualización gráfica** en tiempo real: envolventes de entrada/salida e histograma de procesamiento.
+- **Visualización gráfica** en tiempo real: medidor de reducción de ganancia.
 - **Gestión completa de presets** con funciones de guardar, guardar como, eliminar, y navegación.
-- **Monitor solo sidechain**, y escucha directa del filtrado sidechain.
-- **Bypass interno**, no automatizable, con transición suave.
+- **Bypass verdadero**, no afectado por trim de entrada.
 - **Cambio de idioma** dinámico para tooltips (Español/Inglés).
 - **Visualización del diagrama de bloques** con acceso directo al código GenExpr por sección.
 
@@ -123,12 +120,13 @@ Los tests validan los formatos VST3 y AU del plugin.
 
 - Migrar de Plugin Export a la exportación C++ de RNBO.
 - Implementar oversampling con el módulo DSP de JUCE.
-- Implementar modos dual y M/S.
+- Implementar soft knee ajustable con transición suave.
+- Implementar sidechain externo.
 - Implementar mapeo MIDI.
-- Mejorar sistema de visualización entrada/salida e histograma de reducción de ganancia.
+- Mejorar sistema de visualización con curva de transferencia y espectro.
 - Portar a SuperCollider los bloques de GenExpr, y/o crear UGen.
 - Hacer el Max For Live device.
 
 ---
 
-*© 2025 Juan Carlos Blancas – JCBTransient v0.9.0 beta*
+*© 2025 Juan Carlos Blancas – JCBMaximizer v0.9.0 beta*
