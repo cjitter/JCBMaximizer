@@ -18,6 +18,7 @@
 #include <mutex>
 #include <vector>
 #include <unordered_map>
+#include <atomic>
 
 // Archivos del proyecto
 #include "JCBMaximizer.h"
@@ -30,7 +31,8 @@ using namespace juce;
 //==============================================================================
 class JCBMaximizerAudioProcessor : public juce::AudioProcessor,
                                     public juce::AudioProcessorValueTreeState::Listener,
-                                    private juce::Timer
+                                    private juce::Timer,
+                                    private juce::AsyncUpdater
 {
 public:
     //==============================================================================
@@ -45,6 +47,10 @@ public:
     
     bool isBusesLayoutSupported(const juce::AudioProcessor::BusesLayout& layouts) const override;
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    
+    // Método común de procesamiento para manejo unificado de bypass
+    void processBlockCommon(juce::AudioBuffer<float>& buffer, bool hostWantsBypass);
     
     //==============================================================================
     // Gestión del editor
@@ -289,6 +295,89 @@ private:
     ParameterState stateA;
     ParameterState stateB;
     bool isStateA{true};
+    
+    //==============================================================================
+    // SISTEMA DE BYPASS COMPENSADO
+    //==============================================================================
+    
+    // --- Ring Buffer para compensación de latencia ---
+    juce::AudioBuffer<float> bypassDelayBuffer;  // Ring buffer circular para DRY compensado
+    int  bypassDelayWritePos { 0 };              // Posición de escritura actual en el ring
+    juce::SpinLock bypassDelayLock;              // Lock para thread-safety del ring buffer
+    int  bypassDelayCapacity { 0 };              // Capacidad fija preasignada (máximo lookahead)
+    int  dryPrimedSamples   { 0 };               // Contador de muestras válidas en el ring
+
+    // --- Scratch Buffers RT-safe ---
+    juce::AudioBuffer<float> scratchIn;          // Buffer temporal para entrada (2ch: L/R)
+    juce::AudioBuffer<float> scratchDry;         // Buffer temporal para DRY compensado (2ch: L/R)
+    int scratchCapacitySamples { 0 };            // Capacidad actual de los scratch buffers
+
+    // Helper: asegura capacidad de scratch sin allocations en audio thread
+    inline void ensureScratchCapacity (int numSamples)
+    {
+        if (numSamples > scratchCapacitySamples)
+        {
+            scratchIn.setSize (2, numSamples, false, false, true);
+            scratchDry.setSize(2, numSamples, false, false, true);
+            scratchIn.clear();
+            scratchDry.clear();
+            scratchCapacitySamples = numSamples;
+        }
+    }
+
+    // --- FSM de Bypass con Fade ---
+    enum class BypassState { Active, FadingToBypass, Bypassed, FadingToActive };
+    BypassState bypassState { BypassState::Active };  // Estado actual del bypass
+    int  bypassFadeLen { 384 };                       // Longitud del fade en samples (calculado de bypassFadeMs)
+    float bypassFadeMs { 7.0f };                      // Duración del fade en ms (7ms por defecto)
+    int  bypassFadePos { 0 };                         // Posición actual del fade (0 a bypassFadeLen)
+
+    // --- Control y sincronización ---
+    std::atomic<bool> hostBypassMirror { false };     // Espejo atómico del estado de bypass del host
+    bool lastWantsBypass { false };                   // Estado anterior para detección de flancos
+    
+    // --- Compatibilidad con sistema anterior ---
+    juce::AudioBuffer<float> lastWetTail;             // Mantenido por compatibilidad (no usado en nuevo sistema)
+    int   lastWetTailLen   { 0 };                     // Mantenido por compatibilidad
+    bool  wasHostBypassed  { false };                 // Mantenido por compatibilidad
+
+    // Helper para leer el parámetro de bypass del host
+    inline bool isHostBypassed() const noexcept
+    {
+        if (auto* p = getBypassParameter())          // JUCE crea un parámetro estándar de bypass
+            return p->getValue() >= 0.5f;            // 0..1
+        return false;
+    }
+
+    // LATENCIA SEGURA (message thread)
+    std::atomic<int> pendingLatency { -1 };
+    int currentLatency = 0;
+    
+    // LOOKAHEAD DEBOUNCE
+    std::atomic<float>   stagedLookaheadMs { 0.0f };
+    std::atomic<uint32_t> lastLAChangeMs   { 0 };
+    std::atomic<bool>    laCommitPending   { false };
+    int                  laDebounceMs      { 140 };
+    
+    // Offset intrínseco de Gen~ (0 si Gen no añade +1; 1 si sí)
+    std::atomic<int> intrinsicGenOffset { 0 };
+    
+    // Helper: calcula latencia en muestras
+    int computeLatencySamples (double sr) const
+    {
+        if (sr <= 0.0) return 0;
+        float latMs = apvts.getRawParameterValue("n_LOOKAHEAD")->load();
+        if (! std::isfinite(latMs) || latMs < 0.0f) latMs = 0.0f;
+        const int base = juce::roundToInt (latMs * sr / 1000.0);
+        return juce::jmax (0, base + intrinsicGenOffset.load(std::memory_order_relaxed));
+    }
+    
+    // Override de AsyncUpdater
+    void handleAsyncUpdate() override;
+
+    // Cachear índices de gen (evitar búsquedas por nombre)
+    int genIdxLookahead { -1 };
+    int genIdxBypass   { -1 }; // si lo usas en el maximizer
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(JCBMaximizerAudioProcessor)
