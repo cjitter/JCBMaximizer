@@ -249,10 +249,10 @@ lookaheadHistory = fixdenorm(smoothedLookahead);
 
 // Convertir tiempo de lookahead (ms) a muestras
 lookaheadSamples = round(mstosamps(smoothedLookahead));
-// o round(mstosamps(...)) si así lo tienes en los otros
 
 // Por seguridad, clamp del índice (tu lookahead máx 5 ms << samplerate)
-lh = max(0, lookaheadSamples);
+//lh = max(0, lookaheadSamples);
+lh = clamp(lookaheadSamples, 0, samplerate - 1);
 
 // Lecturas en STEP para evitar interpolación y mantener PDC limpia
 delayedLeft          = delayLeft.read(lh, interp="step");
