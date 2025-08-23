@@ -175,9 +175,13 @@ void CreditsWindow::paint(juce::Graphics& g)
             }
         }
         
+        // Siempre dibujar la línea completa primero
+        g.drawText(line, textArea.getX(), yPos, textArea.getWidth(), lineHeight,
+                  juce::Justification::centred, false);
+        
+        // Si hay un link con hover en esta línea, añadir efectos visuales
         if (hasLinkInLine && hoveredLinkIndex == linkIndexInLine)
         {
-            // Si hay un link con hover, dibujar la línea por partes para evitar doble texto
             int lineWidth = static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, line));
             int startX = textArea.getCentreX() - lineWidth / 2;
             
@@ -185,37 +189,22 @@ void CreditsWindow::paint(juce::Graphics& g)
             int linkStart = line.indexOf(links[linkIndexInLine].text);
             juce::String beforeLink = line.substring(0, linkStart);
             juce::String linkText = links[linkIndexInLine].text;
-            juce::String afterLink = line.substring(linkStart + linkText.length());
             
-            // Dibujar parte antes del link
-            if (beforeLink.isNotEmpty())
-            {
-                g.drawText(beforeLink, startX, yPos, static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, beforeLink)), lineHeight,
-                          juce::Justification::left, false);
-            }
-            
-            // Dibujar el link con estilo
+            // Calcular posición exacta del link
             int linkX = startX + static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, beforeLink));
-            g.setColour(textColour.brighter(0.3f));
-            g.setFont(monoFont.withStyle(juce::Font::underlined));
-            g.drawText(linkText, linkX, yPos, static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, linkText)), lineHeight,
-                      juce::Justification::left, false);
+            int linkWidth = static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, linkText));
             
-            // Restaurar estilo y dibujar parte después del link
-            g.setFont(monoFont);
+            // Dibujar highlight semi-transparente sobre el link (sin redibujar texto)
+            g.setColour(juce::Colours::cyan.withAlpha(0.15f));
+            g.fillRect(linkX, yPos, linkWidth, lineHeight);
+            
+            // Dibujar subrayado manual con color destacado
+            g.setColour(textColour.brighter(0.3f));
+            float underlineY = yPos + lineHeight - 2.0f;
+            g.fillRect(linkX, static_cast<int>(underlineY), linkWidth, 1);
+            
+            // Restaurar color
             g.setColour(textColour);
-            if (afterLink.isNotEmpty())
-            {
-                int afterX = linkX + static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, linkText));
-                g.drawText(afterLink, afterX, yPos, static_cast<int>(juce::GlyphArrangement::getStringWidth(monoFont, afterLink)), lineHeight,
-                          juce::Justification::left, false);
-            }
-        }
-        else
-        {
-            // Dibujar línea normal
-            g.drawText(line, textArea.getX(), yPos, textArea.getWidth(), lineHeight,
-                      juce::Justification::centred, false);
         }
         
         // Espaciado adicional después del título
@@ -324,7 +313,7 @@ void CreditsWindow::buildFullCreditsTextSpanish()
     links.clear();
     
     // Generar texto formateado con saltos de línea para llenar el diálogo
-    fullText = "\nJCBMaximizer v0.9.0 beta";
+    fullText = "\nJCBMaximizer v0.9.1 beta";
     if (pluginFormat.isNotEmpty())
         fullText += " (" + pluginFormat + ")";
     fullText += "\n";

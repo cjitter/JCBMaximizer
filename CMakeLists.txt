@@ -19,7 +19,7 @@
 
 cmake_minimum_required(VERSION 3.20)
 
-project(JCBMaximizer VERSION 0.9.0)
+project(JCBMaximizer VERSION 0.9.1)
 
 # Configuración C++
 set(CMAKE_CXX_STANDARD 20)
@@ -130,7 +130,7 @@ juce_add_binary_data(JCBMaximizer_BinaryData
         Assets/code/Detector.txt
         Assets/code/Output.txt
         # Presets de fábrica
-        Assets/FactoryPresets/plus6.preset
+        Assets/FactoryPresets/General_Plus6.preset
 )
 
 # Linkear binary data al plugin
