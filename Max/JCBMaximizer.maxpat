@@ -4,15 +4,64 @@
 		"appversion" : 		{
 			"major" : 9,
 			"minor" : 0,
-			"revision" : 7,
+			"revision" : 8,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 164.0, 141.0, 1614.0, 733.0 ],
+		"rect" : [ 164.0, 165.0, 1614.0, 733.0 ],
 		"gridsize" : [ 15.0, 15.0 ],
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-34",
+					"maxclass" : "toggle",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "int" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 1454.0, 425.0, 24.0, 24.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-22",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 1454.0, 460.0, 79.0, 22.0 ],
+					"presentation_linecount" : 2,
+					"text" : "o_DCFILT $1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "autoexport",
+					"id" : "obj-26",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 410.0, 87.0, 138.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-25",
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 483.0, 30.0, 301.0, 20.0 ],
+					"text" : "/Users/jcb/JUCEProjects/JCBMaximizer/exported-code"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-37",
 					"maxclass" : "newobj",
@@ -23,13 +72,13 @@
 						"appversion" : 						{
 							"major" : 9,
 							"minor" : 0,
-							"revision" : 7,
+							"revision" : 8,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 2046.0, 202.0, 1572.0, 666.0 ],
+						"rect" : [ 175.0, 193.0, 1572.0, 666.0 ],
 						"gridsize" : [ 15.0, 15.0 ],
 						"boxes" : [ 							{
 								"box" : 								{
@@ -48,7 +97,7 @@
 						"lines" : [  ]
 					}
 ,
-					"patching_rect" : [ 408.0, 130.0, 68.0, 22.0 ],
+					"patching_rect" : [ 468.0, 157.0, 68.0, 22.0 ],
 					"text" : "p PARAMS"
 				}
 
@@ -64,7 +113,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1436.0, 265.0, 50.0, 22.0 ]
+					"patching_rect" : [ 1380.0, 265.0, 50.0, 22.0 ]
 				}
 
 			}
@@ -75,7 +124,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1436.0, 305.0, 85.0, 22.0 ],
+					"patching_rect" : [ 1380.0, 305.0, 85.0, 22.0 ],
 					"text" : "i_MAKEUP $1"
 				}
 
@@ -91,7 +140,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 1,
-					"patching_rect" : [ 755.0, 194.0, 50.0, 22.0 ],
+					"patching_rect" : [ 662.0, 242.0, 50.0, 22.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
 							"parameter_initial" : [ -10.0 ],
@@ -116,7 +165,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 755.0, 243.0, 68.0, 22.0 ],
+					"patching_rect" : [ 662.0, 291.0, 68.0, 22.0 ],
 					"text" : "a_GAIN $1"
 				}
 
@@ -128,7 +177,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "float" ],
-					"patching_rect" : [ 468.0, 445.0, 12.0, 76.0 ]
+					"patching_rect" : [ 474.0, 482.0, 12.0, 76.0 ]
 				}
 
 			}
@@ -139,7 +188,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "float" ],
-					"patching_rect" : [ 375.0, 445.0, 12.0, 76.0 ]
+					"patching_rect" : [ 381.0, 482.0, 12.0, 76.0 ]
 				}
 
 			}
@@ -152,7 +201,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 315.0, 449.0, 24.0, 78.0 ],
+					"patching_rect" : [ 321.0, 486.0, 24.0, 78.0 ],
 					"setminmax" : [ 0.0, 1.0 ],
 					"setstyle" : 1,
 					"slidercolor" : [ 1.0, 0.0, 0.070588235294118, 0.99 ]
@@ -171,7 +220,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "signal", "float" ],
-					"patching_rect" : [ 278.0, 420.0, 56.0, 22.0 ],
+					"patching_rect" : [ 284.0, 457.0, 56.0, 22.0 ],
 					"sig" : 0.0
 				}
 
@@ -184,7 +233,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1183.0, 72.0, 24.0, 24.0 ]
+					"patching_rect" : [ 1111.0, 124.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -199,7 +248,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1183.0, 103.0, 50.0, 22.0 ]
+					"patching_rect" : [ 1111.0, 155.0, 50.0, 22.0 ]
 				}
 
 			}
@@ -210,7 +259,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1183.0, 130.0, 98.0, 22.0 ],
+					"patching_rect" : [ 1111.0, 182.0, 98.0, 22.0 ],
 					"text" : "m_AUTOREL $1"
 				}
 
@@ -223,7 +272,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1071.0, 156.0, 24.0, 24.0 ]
+					"patching_rect" : [ 978.0, 204.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -238,7 +287,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1071.0, 195.0, 50.0, 22.0 ]
+					"patching_rect" : [ 978.0, 243.0, 50.0, 22.0 ]
 				}
 
 			}
@@ -249,7 +298,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1071.0, 243.0, 82.0, 22.0 ],
+					"patching_rect" : [ 978.0, 291.0, 82.0, 22.0 ],
 					"text" : "l_DETECT $1"
 				}
 
@@ -262,7 +311,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1473.0, 353.0, 24.0, 24.0 ]
+					"patching_rect" : [ 1417.0, 353.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -273,7 +322,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1473.0, 389.0, 74.0, 22.0 ],
+					"patching_rect" : [ 1417.0, 389.0, 74.0, 22.0 ],
 					"text" : "k_DELTA $1"
 				}
 
@@ -289,7 +338,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 947.0, 195.0, 50.0, 22.0 ]
+					"patching_rect" : [ 854.0, 243.0, 50.0, 22.0 ]
 				}
 
 			}
@@ -304,7 +353,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 683.0, 195.0, 50.0, 22.0 ]
+					"patching_rect" : [ 590.0, 243.0, 50.0, 22.0 ]
 				}
 
 			}
@@ -315,7 +364,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 947.0, 243.0, 113.0, 22.0 ],
+					"patching_rect" : [ 854.0, 291.0, 113.0, 22.0 ],
 					"text" : "n_LOOKAHEAD $1"
 				}
 
@@ -327,7 +376,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 683.0, 243.0, 64.0, 22.0 ],
+					"patching_rect" : [ 590.0, 291.0, 64.0, 22.0 ],
 					"text" : "j_TRIM $1"
 				}
 
@@ -343,7 +392,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "signal", "float" ],
-					"patching_rect" : [ 217.0, 604.0, 80.0, 22.0 ],
+					"patching_rect" : [ 223.0, 641.0, 80.0, 22.0 ],
 					"sig" : 0.0
 				}
 
@@ -356,7 +405,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1375.0, 118.0, 24.0, 24.0 ]
+					"patching_rect" : [ 1319.0, 118.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -367,7 +416,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1375.0, 157.0, 83.0, 22.0 ],
+					"patching_rect" : [ 1319.0, 157.0, 83.0, 22.0 ],
 					"text" : "g_DITHER $1"
 				}
 
@@ -383,7 +432,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "signal", "float" ],
-					"patching_rect" : [ 111.0, 604.0, 80.0, 22.0 ],
+					"patching_rect" : [ 117.0, 641.0, 80.0, 22.0 ],
 					"sig" : 0.0
 				}
 
@@ -399,7 +448,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 828.0, 194.0, 51.0, 22.0 ]
+					"patching_rect" : [ 735.0, 242.0, 51.0, 22.0 ]
 				}
 
 			}
@@ -410,7 +459,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "float" ],
-					"patching_rect" : [ 199.0, 550.0, 12.0, 76.0 ]
+					"patching_rect" : [ 205.0, 587.0, 12.0, 76.0 ]
 				}
 
 			}
@@ -421,7 +470,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "float" ],
-					"patching_rect" : [ 95.0, 550.0, 12.0, 76.0 ]
+					"patching_rect" : [ 101.0, 587.0, 12.0, 76.0 ]
 				}
 
 			}
@@ -433,7 +482,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 1404.0, 189.0, 24.0, 24.0 ]
+					"patching_rect" : [ 1348.0, 189.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -444,7 +493,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1404.0, 222.0, 86.0, 22.0 ],
+					"patching_rect" : [ 1348.0, 222.0, 86.0, 22.0 ],
 					"text" : "h_BYPASS $1"
 				}
 
@@ -457,7 +506,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 115.0, 107.0, 24.0, 24.0 ]
+					"patching_rect" : [ 121.0, 101.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -468,7 +517,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 115.0, 137.0, 65.0, 22.0 ],
+					"patching_rect" : [ 121.0, 131.0, 65.0, 22.0 ],
 					"text" : "modout $1"
 				}
 
@@ -480,7 +529,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "float" ],
-					"patching_rect" : [ 486.0, 397.0, 12.0, 76.0 ]
+					"patching_rect" : [ 492.0, 434.0, 12.0, 76.0 ]
 				}
 
 			}
@@ -501,7 +550,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 378.0, 97.0, 68.0, 22.0 ],
+					"patching_rect" : [ 436.0, 120.0, 68.0, 22.0 ],
 					"text" : "exportcode"
 				}
 
@@ -514,7 +563,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "int" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 58.0, 65.0, 24.0, 24.0 ]
+					"patching_rect" : [ 64.0, 59.0, 24.0, 24.0 ]
 				}
 
 			}
@@ -525,7 +574,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "float" ],
-					"patching_rect" : [ 78.0, 393.0, 12.0, 76.0 ]
+					"patching_rect" : [ 84.0, 430.0, 12.0, 76.0 ]
 				}
 
 			}
@@ -536,7 +585,7 @@
 					"numinlets" : 0,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 126.0, 302.0, 61.0, 22.0 ],
+					"patching_rect" : [ 132.0, 339.0, 61.0, 22.0 ],
 					"text" : "r toMaxim"
 				}
 
@@ -547,7 +596,7 @@
 					"maxclass" : "newobj",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 1012.0, 577.0, 63.0, 22.0 ],
+					"patching_rect" : [ 919.0, 625.0, 63.0, 22.0 ],
 					"text" : "s toMaxim"
 				}
 
@@ -563,7 +612,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 1,
-					"patching_rect" : [ 1162.0, 194.0, 57.0, 22.0 ],
+					"patching_rect" : [ 1069.0, 242.0, 57.0, 22.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
 							"parameter_initial" : [ 15.0 ],
@@ -593,7 +642,7 @@
 					"numoutlets" : 2,
 					"outlettype" : [ "", "bang" ],
 					"parameter_enable" : 1,
-					"patching_rect" : [ 1237.0, 194.0, 50.0, 22.0 ],
+					"patching_rect" : [ 1144.0, 242.0, 50.0, 22.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
 							"parameter_initial" : [ 80.0 ],
@@ -619,7 +668,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1237.0, 243.0, 61.0, 22.0 ],
+					"patching_rect" : [ 1144.0, 291.0, 61.0, 22.0 ],
 					"text" : "e_REL $1"
 				}
 
@@ -631,7 +680,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 1162.0, 243.0, 61.0, 22.0 ],
+					"patching_rect" : [ 1069.0, 291.0, 61.0, 22.0 ],
 					"text" : "d_ATK $1"
 				}
 
@@ -643,7 +692,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 828.0, 243.0, 90.0, 22.0 ],
+					"patching_rect" : [ 735.0, 291.0, 90.0, 22.0 ],
 					"text" : "b_CELLING $1"
 				}
 
@@ -654,7 +703,7 @@
 					"maxclass" : "ezdac~",
 					"numinlets" : 2,
 					"numoutlets" : 0,
-					"patching_rect" : [ 135.0, 507.0, 45.0, 45.0 ]
+					"patching_rect" : [ 141.0, 544.0, 45.0, 45.0 ]
 				}
 
 			}
@@ -665,7 +714,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 92.0, 65.0, 88.0, 22.0 ],
+					"patching_rect" : [ 98.0, 59.0, 88.0, 22.0 ],
 					"text" : "open, loop 1, 1"
 				}
 
@@ -677,7 +726,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 3,
 					"outlettype" : [ "signal", "signal", "bang" ],
-					"patching_rect" : [ 92.0, 177.0, 226.0, 22.0 ],
+					"patching_rect" : [ 98.0, 171.0, 226.0, 22.0 ],
 					"text" : "sfplay~ 2"
 				}
 
@@ -694,13 +743,13 @@
 						"appversion" : 						{
 							"major" : 9,
 							"minor" : 0,
-							"revision" : 7,
+							"revision" : 8,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
 						"classnamespace" : "dsp.gen",
-						"rect" : [ 217.0, 87.0, 1102.0, 904.0 ],
+						"rect" : [ 758.0, 87.0, 1102.0, 903.0 ],
 						"gridsize" : [ 15.0, 15.0 ],
 						"boxes" : [ 							{
 								"box" : 								{
@@ -761,7 +810,7 @@
 							}
 , 							{
 								"box" : 								{
-									"code" : "// ====================================\n// FUNCIÓN SOFT KNEE LIMITER\n// ====================================\n// Aplica limitación con transición suave (soft knee)\n// xg: nivel de entrada en dB\n// threshold: umbral de limitación en dB  \n// kneeWidth: ancho de la transición suave en dB\nsoftkneeLimiter(xg, threshold, kneeWidth) {\n    ret = 0;\n    \n    // Si la señal está muy por debajo del umbral (fuera de la rodilla)\n    if ((2 * (xg - threshold)) < (kneeWidth * (-1))) {\n        ret = xg;  // No hay reducción\n    }\n    // Si la señal está dentro de la zona de transición suave (rodilla)\n    else if ((2 * abs(xg - threshold)) <= kneeWidth) {\n        // Aplica reducción cuadrática para transición suave\n        ret = xg - (pow((xg - threshold) - (kneeWidth / 2), 2) / (2 * kneeWidth));\n    }\n    // Si la señal está por encima del umbral (fuera de la rodilla)\n    else if ((2 * (xg - threshold)) > kneeWidth) {\n        ret = threshold;  // Limitación total al umbral\n    }\n    \n    return ret;\n}\n\n// ====================================\n// DECLARACIÓN DE PARÁMETROS\n// ====================================\nParam d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms\nParam b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB\nParam a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB) - moderno\nParam e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms\nParam g_DITHER(0, min=0, default=0, max=1);        // Cantidad de dither (0-1)\nParam h_BYPASS(0, min=0, default=0, max=1);        // Bypass del efecto (0-1)\nParam i_MAKEUP(0, min=-12, default=0, max=12);     // Makeup gain post-proceso (dB)\nParam j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)\nParam k_DELTA(0, min=0, default=0, max=1);         // Delta mode (0-1)\nParam l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)\nParam m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)\nParam n_LOOKAHEAD(0, min=0, default=0, max=5);     // Lookahead time (ms)\n\n// ====================================\n// VARIABLES DE ESTADO (HISTORIALES)\n// ====================================\nHistory smoothedGain(0);         // Suavizado del gain (antes threshold)\nHistory smoothedCeiling(0);      // Suavizado del techo\nHistory smoothedBypass(0);       // Suavizado del bypass\nHistory smoothedMakeup(0);       // Suavizado del makeup gain\nHistory envelopeFollower(0);     // Seguidor de envolvente para detección RMS\nHistory gainReduction(0);        // Reducción de ganancia actual\nHistory lookaheadHistory(0);     // Para suavizado del lookahead\nHistory trimHistory(0);          // Para suavizado del trim\nHistory deltaHistory(0);         // Para suavizado del modo delta\nHistory detectHistory(0);        // Para suavizado del modo de detección\nHistory autoReleaseHistory(0);   // Para suavizado del auto-release\nHistory transientDetector(0);    // Detector de transientes para auto-release\nHistory prevDetection(0);        // Detección anterior para calcular cambios\nHistory rmsSum(0);               // Suma para RMS sliding window\n\n// ====================================\n// LÍNEAS DE DELAY PARA LOOKAHEAD\n// ====================================\nDelay delayLeft(samplerate);        // Delay canal izquierdo (con trim)\nDelay delayRight(samplerate);       // Delay canal derecho (con trim)\nDelay delayDetectLeft(samplerate);  // Delay detección izquierda\nDelay delayDetectRight(samplerate); // Delay detección derecha\nDelay leftInputDelay(samplerate);   // Delay canal izquierdo (sin trim para bypass)\nDelay rightInputDelay(samplerate);  // Delay canal derecho (sin trim para bypass)\nDelay rmsDelay(500);                // Buffer para RMS sliding window (500 samples ~10ms @ 48kHz)\n\n// ====================================\n// CONSTANTES GLOBALES\n// ====================================\nditherAmount = 1.5258789062e-05;       // Cantidad de ruido para dither\nSMOOTH_HISTORY_FACTOR = 0.999;         // Factor de suavizado para valores históricos (99.9%)\nSMOOTH_PARAM_FACTOR = 0.001;           // Factor de suavizado para nuevos parámetros (0.1%)\nLOOKAHEAD_SMOOTH_FACTOR = 0.99;        // Factor de suavizado para lookahead\nexpConstant = -0.99967234081321;       // Constante para cálculo exponencial de tiempos\n\n// ====================================\n// SUAVIZADO DE PARÁMETROS\n// ====================================\n// Suavizado del trim\nsmoothedTrim = trimHistory * 0.999 + j_TRIM * 0.001;\ntrimHistory = fixdenorm(smoothedTrim);\ntrimLinear = dbtoa(smoothedTrim);\n\n// Suavizado del threshold con factor 0.999\nsmoothedGain = smoothedGain * 0.999 + (-a_GAIN) * 0.001;\nsmoothedGain = fixdenorm(smoothedGain);\n\n// Conversión de threshold a factor lineal\nthresholdLinear = 1 / pow(10, smoothedGain / 20);\n\n// Suavizado del ceiling\nsmoothedCeiling = smoothedCeiling * 0.999 + b_CELLING * 0.001;\nsmoothedCeiling = fixdenorm(smoothedCeiling);\n\n// Suavizado del bypass\nsmoothedBypass = smoothedBypass * 0.999 + h_BYPASS * 0.001;\nsmoothedBypass = fixdenorm(smoothedBypass);\nwetAmount = 1 - smoothedBypass;  // Cantidad de señal procesada\n\n// Suavizado del makeup gain\nsmoothedMakeup = smoothedMakeup * 0.999 + i_MAKEUP * 0.001;\nsmoothedMakeup = fixdenorm(smoothedMakeup);\nmakeupLinear = dbtoa(smoothedMakeup);\n\n// Suavizado del modo delta\nsmoothedDelta = deltaHistory * 0.999 + k_DELTA * 0.001;\ndeltaHistory = fixdenorm(smoothedDelta);\n\n// Suavizado del modo de detección\nsmoothedDetect = detectHistory * 0.999 + l_DETECT * 0.001;\ndetectHistory = fixdenorm(smoothedDetect);\n\n// Suavizado del auto-release\nsmoothedAutoRelease = autoReleaseHistory * 0.999 + m_AUTOREL * 0.001;\nautoReleaseHistory = fixdenorm(smoothedAutoRelease);\n\n// ====================================\n// PREPARACIÓN DE SEÑALES DE ENTRADA\n// ====================================\n// Aplicar trim a las entradas\nleftTrimmed = in1 * trimLinear;\nrightTrimmed = in2 * trimLinear;\n\n// Conversión de ceiling a lineal\nceilingLinear = dbtoa(b_CELLING);\n\n// Aplicar ceiling y threshold a las entradas CON TRIM\nrightScaled = ceilingLinear * rightTrimmed * thresholdLinear;\nleftScaled = ceilingLinear * leftTrimmed * thresholdLinear;\n\n// ====================================\n// DETECCIÓN DE NIVEL\n// ====================================\n// Promedio de ambos canales para detección\naverageSignal = (leftScaled + rightScaled) * 0.5;\naverageAbs = abs(averageSignal);\n\n// Peak detection (instantánea)\npeakDetection = averageAbs;\n\n// RMS sliding window (ventana de ~3ms)\nrmsWindowSize = max(1, floor(3 * samplerate * 0.001));  // 3ms en samples\nrmsWindowInv = 1 / rmsWindowSize;\n\n// Calcular RMS con ventana deslizante\nsignalSquared = averageSignal * averageSignal;\noldestSquared = rmsDelay.read(rmsWindowSize, interp=\"none\");\nrmsSumNew = (signalSquared + rmsSum) - oldestSquared;\nrmsSumClipped = max(0, rmsSumNew);  // Evitar valores negativos por errores de redondeo\nrmsDetection = sqrt(rmsSumClipped * rmsWindowInv);\n\n// Actualizar delay y suma\nrmsSum = rmsSumClipped;\nrmsDelay.write(signalSquared);\n\n// Interpolar entre Peak y RMS según el parámetro\ndetectionSignal = mix(peakDetection, rmsDetection, smoothedDetect);\n\n// ====================================\n// CÁLCULO DE CONSTANTES DE TIEMPO Y AUTO-RELEASE\n// ====================================\n\n// Auto-release: detectar transientes y ajustar release dinámicamente\nfinalReleaseTime = e_REL;  // Por defecto usar release manual\n\nif(smoothedAutoRelease > 0.01) {\n    // Calcular cambio en la señal\n    signalChange = abs(detectionSignal - prevDetection);\n    prevDetection = detectionSignal;\n    \n    // Detectar si es transiente (cambio rápido) o sostenido\n    relativeThreshold = max(0.001, detectionSignal * 0.1);  // 10% del nivel actual\n    isTransient = signalChange > relativeThreshold ? 1 : 0;\n    \n    // Suavizar detección de transientes\n    transientSmooth = 0.99;  // Respuesta rápida\n    transientDetector = (transientDetector * transientSmooth) + (isTransient * (1 - transientSmooth));\n    \n    // Definir rangos de release para limitador\n    fastRelease = 5;     // 5ms para transientes (muy rápido)\n    slowRelease = 150;   // 150ms para material sostenido\n    \n    // Interpolar basado en contenido detectado\n    autoRelease = mix(slowRelease, fastRelease, transientDetector);\n    \n    // Mezclar release manual con auto\n    finalReleaseTime = mix(e_REL, autoRelease, smoothedAutoRelease);\n}\n\n// Constante de tiempo para release final\nreleaseTime = finalReleaseTime * 0.001 * samplerate;\nreleaseCoeff = exp(expConstant / releaseTime);\n\n// Seguidor de envolvente con release\nenvelopeFollower = max(detectionSignal, envelopeFollower * releaseCoeff);\n\n// Constante de tiempo para attack\nattackTime = d_ATK * 0.001 * samplerate;\nattackCoeff = exp(expConstant / attackTime);\n\n// Aplicar attack al seguidor de envolvente\ngainReduction = gainReduction * attackCoeff + envelopeFollower * (1 - attackCoeff);\ngainReduction = max(gainReduction, 0.000001);  // Evitar valores negativos o cero\ngainReduction = fixdenorm(gainReduction);\n\n// Conversión a dB para procesar con soft knee\ngainReductionDb = atodb(gainReduction);\n\n// Actualizar historiales para siguiente muestra\nenvelopeFollower = fixdenorm(envelopeFollower);\n\n// ====================================\n// APLICACIÓN DE SOFT KNEE LIMITER\n// ====================================\n// Hard knee fijo (knee = 0) para evitar discontinuidades\nlimitedDb = softkneeLimiter(gainReductionDb, smoothedCeiling, 0);\n\n// ====================================\n// PREPARACIÓN DE LÍMITES Y DELAYS\n// ====================================\nceilingNegative = ceilingLinear * -1;  // Límite negativo\nceilingPositive = ceilingLinear * 1;   // Límite positivo\n\n// Suavizado del lookahead (más rápido pero aún suave para evitar clicks)\nsmoothedLookahead = lookaheadHistory * 0.99 + n_LOOKAHEAD * 0.01;\nlookaheadHistory = fixdenorm(smoothedLookahead);\n\n// Convertir tiempo de lookahead (ms) a muestras\nlookaheadSamples = int(smoothedLookahead * 0.001 * samplerate);\n\n// Leer señales retrasadas\ndelayedLeft = delayLeft.read(lookaheadSamples);\ndelayedRight = delayRight.read(lookaheadSamples);\ndelayedDetectLeft = delayDetectLeft.read(lookaheadSamples);\ndelayedDetectRight = delayDetectRight.read(lookaheadSamples);\n\n// Leer señales originales sin trim para bypass verdadero\ndelayedLeftOriginal = leftInputDelay.read(lookaheadSamples);\ndelayedRightOriginal = rightInputDelay.read(lookaheadSamples);\n\n// ====================================\n// GANANCIA DE COMPENSACIÓN (UNITY/MAKEUP)\n// ====================================\n// Nota: Esta línea ya no se usa, makeupLinear se calcula arriba\n// makeupGainLinear = dbtoa(smoothedThreshold);\n\n// ====================================\n// GENERACIÓN DE DITHER\n// ====================================\n// TPDF (Triangular Probability Density Function) dither\n// Suma de dos ruidos blancos para distribución triangular\nnoise1 = noise() * ditherAmount * 0.5;\nnoise2 = noise() * ditherAmount * 0.5;\nditherTPDF = noise1 + noise2;\nditherGated = gate(g_DITHER, ditherTPDF);\n\n// ====================================\n// CÁLCULO DE REDUCCIÓN DE GANANCIA\n// ====================================\n// Diferencia entre señal limitada y original (en dB)\ngainReductionAmount = limitedDb - gainReductionDb;\ngainReductionAmount = max(gainReductionAmount, -144);  // Limitar a -144dB mínimo\ngainReductionLinear = dbtoa(gainReductionAmount);\n\n// Calcular ganancia total aplicada para normalización del delta\ntotalGainApplied = trimLinear * thresholdLinear;\n\n// ====================================\n// PROCESAMIENTO CANAL IZQUIERDO\n// ====================================\n// Aplicar reducción de ganancia\nleftProcessed = delayedDetectLeft * gainReductionLinear;\n\n// Aplicar clipping (SIN dither aquí)\nleftClipped = clamp(leftProcessed, ceilingNegative, ceilingPositive);\n\n// Aplicar makeup gain SOLO cuando NO está en modo delta\nleftWithMakeup = leftClipped * makeupLinear;\nleftFinalProcessed = mix(leftClipped, leftWithMakeup, 1 - smoothedDelta);\n\n// Modo delta - calcular diferencia normalizada por ceiling y ganancia total\n// Normalizar por ceiling y por la ganancia total aplicada (trim * threshold)\nleftDelta = (delayedDetectLeft - leftClipped) / (ceilingLinear * max(totalGainApplied, 1));\nleftWithDelta = mix(leftFinalProcessed, leftDelta, smoothedDelta);\n\n// Mezclar con señal original según bypass\nleftFinal = mix(delayedLeftOriginal, leftWithDelta, wetAmount);\n\n// Aplicar dither como último paso\nout1 = leftFinal + ditherGated;\n\n// ====================================\n// PROCESAMIENTO CANAL DERECHO\n// ====================================\n// Aplicar reducción de ganancia\nrightProcessed = delayedDetectRight * gainReductionLinear;\n\n// Aplicar clipping (SIN dither aquí)\nrightClipped = clamp(rightProcessed, ceilingNegative, ceilingPositive);\n\n// Aplicar makeup gain SOLO cuando NO está en modo delta\nrightWithMakeup = rightClipped * makeupLinear;\nrightFinalProcessed = mix(rightClipped, rightWithMakeup, 1 - smoothedDelta);\n\n// Modo delta - calcular diferencia normalizada por ceiling y ganancia total\n// Normalizar por ceiling y por la ganancia total aplicada (trim * threshold)\nrightDelta = (delayedDetectRight - rightClipped) / (ceilingLinear * max(totalGainApplied, 1));\nrightWithDelta = mix(rightFinalProcessed, rightDelta, smoothedDelta);\n\n// Mezclar con señal original según bypass\nrightFinal = mix(delayedRightOriginal, rightWithDelta, wetAmount);\n\n// Aplicar dither como último paso\nout2 = rightFinal + ditherGated;\n\n// ====================================\n// ESCRIBIR EN BUFFERS DE DELAY\n// ====================================\ndelayDetectRight.write(rightScaled);\ndelayDetectLeft.write(leftScaled);\ndelayRight.write(rightTrimmed);     // Escribir señal con trim\ndelayLeft.write(leftTrimmed);       // Escribir señal con trim\nrightInputDelay.write(in2);         // Escribir señal SIN trim para bypass\nleftInputDelay.write(in1);          // Escribir señal SIN trim para bypass\n\n// ====================================\n// GAIN REDUCTION OUTPUT - Medidor de reducción para UI\n// ====================================\n// gainReductionLinear ya contiene el factor de ganancia lineal\n// 1 = sin reducción, 0.5 = -6dB, 0.25 = -12dB, etc.\n// Este es exactamente el formato que necesitas para el medidor\ngainReductionMeter = mix(1, gainReductionLinear, wetAmount);  // 1 cuando bypass, valor real cuando activo\ngainReductionOutput = clamp(gainReductionMeter, 0, 1);\n\n// ====================================\n// SALIDAS\n// ====================================\n// out1, out2 ya definidas arriba (audio procesado L/R)\nout3 = gainReductionOutput;        // Gain reduction para medidor (0-1) LINEAL\nout4 = leftTrimmed;               // Señal post-trim L (para medidores de entrada)\nout5 = rightTrimmed;              // Señal post-trim R (para medidores de entrada)",
+									"code" : "// ====================================\n// FUNCIÓN SOFT KNEE LIMITER\n// ====================================\n// Aplica limitación con transición suave (soft knee)\n// xg: nivel de entrada en dB\n// threshold: umbral de limitación en dB\n// kneeWidth: ancho de la transición suave en dB\nsoftkneeLimiter(xg, threshold, kneeWidth) {\n    ret = 0;\n    \n    // Si la señal está muy por debajo del umbral (fuera de la rodilla)\n    if ((2 * (xg - threshold)) < (kneeWidth * (-1))) {\n        ret = xg;  // No hay reducción\n    }\n    // Si la señal está dentro de la zona de transición suave (rodilla)\n    else if ((2 * abs(xg - threshold)) <= kneeWidth) {\n        // Aplica reducción cuadrática para transición suave\n        ret = xg - (pow((xg - threshold) - (kneeWidth / 2), 2) / (2 * kneeWidth));\n    }\n    // Si la señal está por encima del umbral (fuera de la rodilla)\n    else if ((2 * (xg - threshold)) > kneeWidth) {\n        ret = threshold;  // Limitación total al umbral\n    }\n    \n    return ret;\n}\n\n\n// ====================================\n// DECLARACIÓN DE PARÁMETROS\n// ====================================\nParam d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms\nParam b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB\nParam a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB) - moderno\nParam e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms\nParam g_DITHER(0, min=0, default=0, max=1);        // Cantidad de dither (0-1)\nParam h_BYPASS(0, min=0, default=0, max=1);        // Bypass del efecto (0-1)\nParam i_MAKEUP(0, min=-12, default=0, max=12);     // Makeup gain post-proceso (dB)\nParam j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)\nParam k_DELTA(0, min=0, default=0, max=1);         // Delta mode (0-1)\nParam l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)\nParam m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)\n\nParam o_DCFILT(0, min=0, default=0, max=1);   // Filtro DC post (0=off,1=on)\nParam n_LOOKAHEAD(0, min=0, default=0, max=5);     // Lookahead time (ms)\n\n// ====================================\n// VARIABLES DE ESTADO (HISTORIALES)\n// ====================================\nHistory smoothedGain(0);         // Suavizado del gain (antes threshold)\nHistory smoothedCeiling(0);      // Suavizado del techo\nHistory smoothedBypass(0);       // Suavizado del bypass\nHistory smoothedMakeup(0);       // Suavizado del makeup gain\nHistory envelopeFollower(0);     // Seguidor de envolvente para detección RMS\nHistory gainReduction(0);        // Reducción de ganancia actual\nHistory lookaheadHistory(0);     // Para suavizado del lookahead\nHistory trimHistory(0);          // Para suavizado del trim\nHistory deltaHistory(0);         // Para suavizado del modo delta\nHistory detectHistory(0);        // Para suavizado del modo de detección\nHistory autoReleaseHistory(0);   // Para suavizado del auto-release\nHistory transientDetector(0);    // Detector de transientes para auto-release\nHistory prevDetection(0);        // Detección anterior para calcular cambios\nHistory rmsSum(0);               // Suma para RMS sliding window\n\nHistory progRmsStateL(0);        // RMS corto del programa L\nHistory progRmsStateR(0);        // RMS corto del programa R\nHistory deltaRmsStateL(0);       // RMS corto del delta L\nHistory deltaRmsStateR(0);       // RMS corto del delta R\n\nHistory hpfPrevInL(0);\nHistory hpfPrevInR(0);\nHistory hpfStateL(0);\nHistory hpfStateR(0);\nHistory dcFiltHistory(0);        // Suavizado del conmutador o_DCFILT (anti-click)\n\n// ====================================\n// LÍNEAS DE DELAY PARA LOOKAHEAD\n// ====================================\nDelay delayLeft(samplerate);        // Delay canal izquierdo (con trim)\nDelay delayRight(samplerate);       // Delay canal derecho (con trim)\nDelay delayDetectLeft(samplerate);  // Delay detección izquierda\nDelay delayDetectRight(samplerate); // Delay detección derecha\nDelay leftInputDelay(samplerate);   // Delay canal izquierdo (sin trim para bypass)\nDelay rightInputDelay(samplerate);  // Delay canal derecho (sin trim para bypass)\nDelay rmsDelay(500);                // Buffer para RMS sliding window (500 samples ~10ms @ 48kHz)\n\n// ====================================\n// CONSTANTES GLOBALES\n// ====================================\nditherAmount = 1.5258789062e-05;       // Cantidad de ruido para dither\nSMOOTH_HISTORY_FACTOR = 0.999;         // Factor de suavizado para valores históricos (99.9%)\nSMOOTH_PARAM_FACTOR = 0.001;           // Factor de suavizado para nuevos parámetros (0.1%)\nLOOKAHEAD_SMOOTH_FACTOR = 0.99;        // Factor de suavizado para lookahead\nexpConstant = -0.99967234081321;       // Constante para cálculo exponencial de tiempos\n\n// ====================================\n// SUAVIZADO DE PARÁMETROS\n// ====================================\n// Suavizado del trim\nsmoothedTrim = trimHistory * 0.999 + j_TRIM * 0.001;\ntrimHistory = fixdenorm(smoothedTrim);\ntrimLinear = dbtoa(smoothedTrim);\n\n// Suavizado del threshold con factor 0.999\nsmoothedGain = smoothedGain * 0.999 + (-a_GAIN) * 0.001;\nsmoothedGain = fixdenorm(smoothedGain);\n\n// Conversión de threshold a factor lineal\nthresholdLinear = 1 / pow(10, smoothedGain / 20);\n\n// Suavizado del ceiling\nsmoothedCeiling = smoothedCeiling * 0.999 + b_CELLING * 0.001;\nsmoothedCeiling = fixdenorm(smoothedCeiling);\n\n// Suavizado del bypass\nsmoothedBypass = smoothedBypass * 0.999 + h_BYPASS * 0.001;\nsmoothedBypass = fixdenorm(smoothedBypass);\nwetAmount = 1 - smoothedBypass;  // Cantidad de señal procesada\n\n// Suavizado del makeup gain\nsmoothedMakeup = smoothedMakeup * 0.999 + i_MAKEUP * 0.001;\nsmoothedMakeup = fixdenorm(smoothedMakeup);\nmakeupLinear = dbtoa(smoothedMakeup);\n\n// Suavizado del modo delta\nsmoothedDelta = deltaHistory * 0.999 + k_DELTA * 0.001;\ndeltaHistory = fixdenorm(smoothedDelta);\n\n// Suavizado del modo de detección\nsmoothedDetect = detectHistory * 0.999 + l_DETECT * 0.001;\ndetectHistory = fixdenorm(smoothedDetect);\n\n// Suavizado del auto-release\nsmoothedAutoRelease = autoReleaseHistory * 0.999 + m_AUTOREL * 0.001;\nautoReleaseHistory = fixdenorm(smoothedAutoRelease);\n\n// Suavizado del filtro DC (anti-click al conmutar)\nsmoothedDCFILT = dcFiltHistory * 0.95 + o_DCFILT * 0.05;  // ataque/relajación rápidos\ndcFiltHistory = fixdenorm(smoothedDCFILT);\n\n// ====================================\n// PREPARACIÓN DE SEÑALES DE ENTRADA\n// ====================================\n// Aplicar trim a las entradas\nleftTrimmed = in1 * trimLinear;\nrightTrimmed = in2 * trimLinear;\n\n// Conversión de ceiling a lineal\nceilingLinear = dbtoa(b_CELLING);\n\n// Aplicar ceiling y threshold a las entradas CON TRIM\nrightScaled = ceilingLinear * rightTrimmed * thresholdLinear;\nleftScaled = ceilingLinear * leftTrimmed * thresholdLinear;\n\n// PRE-WRITE de todos los delays usados luego en read(...)\ndelayDetectLeft.write(leftScaled);\ndelayDetectRight.write(rightScaled);\ndelayLeft.write(leftTrimmed);          // con trim (rama WET)\ndelayRight.write(rightTrimmed);        // con trim (rama WET)\nleftInputDelay.write(in1);             // sin trim (bypass real)\nrightInputDelay.write(in2);            // sin trim (bypass real)\n\n// ====================================\n// DETECCIÓN DE NIVEL\n// ====================================\n// Promedio de ambos canales para detección\naverageSignal = (leftScaled + rightScaled) * 0.5;\n\n// DC-blocker nativo gen~\ndetIn = dcblock(averageSignal);\n\n// Peak detection\npeakDetection = abs(detIn);\n\n// RMS sliding window (ventana de ~3ms)\nrmsWindowSize = max(1, floor(3 * samplerate * 0.001));  // 3ms en samples\nrmsWindowInv = 1 / rmsWindowSize;\n\n// RMS sliding window con detIn\nsignalSquared = detIn * detIn;\n\n// PRE-WRITE\nrmsDelay.write(signalSquared);\n\n// Lo correcto con pre-write es leer N (no N-1)\noldestSquared = rmsDelay.read(rmsWindowSize, interp=\"none\");\n\nrmsSumNew = (signalSquared + rmsSum) - oldestSquared;\nrmsSumClipped = max(0, rmsSumNew);\nrmsDetection = sqrt(rmsSumClipped * rmsWindowInv);\n\n// Historial\nrmsSum = fixdenorm(rmsSumClipped);\n\n// Interpolar entre Peak y RMS según el parámetro\ndetectionSignal = mix(peakDetection, rmsDetection, smoothedDetect);\n\n// ====================================\n// CÁLCULO DE CONSTANTES DE TIEMPO Y AUTO-RELEASE\n// ====================================\n\n// Auto-release: detectar transientes y ajustar release dinámicamente\nfinalReleaseTime = e_REL;  // Por defecto usar release manual\n\nif(smoothedAutoRelease > 0.01) {\n    // Calcular cambio en la señal\n    signalChange = abs(detectionSignal - prevDetection);\n    prevDetection = detectionSignal;\n    \n    // Detectar si es transiente (cambio rápido) o sostenido\n    relativeThreshold = max(0.001, detectionSignal * 0.1);  // 10% del nivel actual\n    isTransient = signalChange > relativeThreshold ? 1 : 0;\n    \n    // Suavizar detección de transientes\n    transientSmooth = 0.99;  // Respuesta rápida\n    transientDetector = (transientDetector * transientSmooth) + (isTransient * (1 - transientSmooth));\n    \n    // Definir rangos de release para limitador\n    fastRelease = 5;     // 5ms para transientes (muy rápido)\n    slowRelease = 150;   // 150ms para material sostenido\n    \n    // Interpolar basado en contenido detectado\n    autoRelease = mix(slowRelease, fastRelease, transientDetector);\n    \n    // Mezclar release manual con auto\n    finalReleaseTime = mix(e_REL, autoRelease, smoothedAutoRelease);\n}\n\n// Constante de tiempo para release final\nreleaseTime = finalReleaseTime * 0.001 * samplerate;\nreleaseCoeff = exp(expConstant / releaseTime);\n\n// Seguidor de envolvente con release\nenvelopeFollower = max(detectionSignal, envelopeFollower * releaseCoeff);\n\n// Constante de tiempo para attack\nattackTime = d_ATK * 0.001 * samplerate;\nattackCoeff = exp(expConstant / attackTime);\n\n// Aplicar attack al seguidor de envolvente\ngainReduction = gainReduction * attackCoeff + envelopeFollower * (1 - attackCoeff);\ngainReduction = max(gainReduction, 0.000001);  // Evitar valores negativos o cero\ngainReduction = fixdenorm(gainReduction);\n\n// Conversión a dB para procesar con soft knee\ngainReductionDb = atodb(gainReduction);\n\n// Actualizar historiales para siguiente muestra\nenvelopeFollower = fixdenorm(envelopeFollower);\n\n// ====================================\n// APLICACIÓN DE SOFT KNEE LIMITER\n// ====================================\n// Hard knee fijo (knee = 0) para evitar discontinuidades\n\nlimitedDb = softkneeLimiter(gainReductionDb, smoothedCeiling, 0);\n\n// ====================================\n// CÁLCULO DE REDUCCIÓN DE GANANCIA (adelantado para usarlo en brickwall)\n// ====================================\n// Diferencia entre señal limitada y original (en dB)\ngainReductionAmount = limitedDb - gainReductionDb;\ngainReductionAmount = max(gainReductionAmount, -144);  // Limitar a -144dB mínimo\ngainReductionLinear = dbtoa(gainReductionAmount);\n\n// Calcular ganancia total aplicada para normalización del delta\n// (Puede no usarse si el delta se normaliza respecto a programDriven*)\ntotalGainApplied = trimLinear * thresholdLinear;\n\n// ====================================\n// PREPARACIÓN DE LÍMITES Y LOOKAHEAD\n// ====================================\nceilingNegative = ceilingLinear * -1;  // Límite negativo\nceilingPositive = ceilingLinear * 1;   // Límite positivo\n\n// Suavizado del lookahead (más rápido pero aún suave para evitar clicks)\nsmoothedLookahead = lookaheadHistory * 0.99 + n_LOOKAHEAD * 0.01;\nlookaheadHistory = fixdenorm(smoothedLookahead);\n\n// Convertir tiempo de lookahead (ms) a muestras\nlookaheadSamples = round(mstosamps(smoothedLookahead));\n\n// Por seguridad, clamp del índice (tu lookahead máx 5 ms << samplerate)\n//lh = max(0, lookaheadSamples);\nlh = clamp(lookaheadSamples, 0, samplerate - 1);\n\n// Lecturas en STEP para evitar interpolación y mantener PDC limpia\ndelayedLeft          = delayLeft.read(lh, interp=\"step\");\ndelayedRight         = delayRight.read(lh, interp=\"step\");\ndelayedDetectLeft    = delayDetectLeft.read(lh, interp=\"step\");\ndelayedDetectRight   = delayDetectRight.read(lh, interp=\"step\");\ndelayedLeftOriginal  = leftInputDelay.read(lh, interp=\"step\");\ndelayedRightOriginal = rightInputDelay.read(lh, interp=\"step\");\n\n// ====================================\n// BRICKWALL: GANANCIA INSTANTÁNEA POR MUESTRA (lookahead)\n// ====================================\n// Ruta de PROGRAMA: usar la señal post-trim y post-lookahead\nprogramL = delayedLeft;\nprogramR = delayedRight;\n\n// Incluir el \"drive\" del maximizador (a_GAIN) mediante thresholdLinear\nprogramDrivenL = programL * thresholdLinear;\nprogramDrivenR = programR * thresholdLinear;\n\n// Cálculo de ganancia segura por canal para encajar en ceiling sobre la señal *con drive*\n// g_br_* <= 1 siempre; evita división por cero con epsilon\nbw_eps = 1e-12;\ng_br_L = min(1, ceilingLinear / max(abs(programDrivenL), bw_eps));\ng_br_R = min(1, ceilingLinear / max(abs(programDrivenR), bw_eps));\n\n// Conservar la envolvente temporal (attack/release + auto-release) como compresión musical\n// sin perder la seguridad brickwall: usar el mínimo de ambos factores\nfinalGain_L = min(g_br_L, gainReductionLinear);\nfinalGain_R = min(g_br_R, gainReductionLinear);\n\n// ====================================\n// GANANCIA DE COMPENSACIÓN (UNITY/MAKEUP)\n// ====================================\n// Nota: Esta línea ya no se usa, makeupLinear se calcula arriba\n// makeupGainLinear = dbtoa(smoothedThreshold);\n\n// ====================================\n// GENERACIÓN DE DITHER (TPDF) DESCORRELACIONADO L/R\n// ====================================\n// gen::noise() es bipolar; usamos dos pares independientes por canal\n// para TPDF descorrelacionado entre L y R\nnoiseL1 = noise() * ditherAmount * 0.5;\nnoiseL2 = noise() * ditherAmount * 0.5;\nditherTPDF_L = noiseL1 + noiseL2;\n\nnoiseR1 = noise() * ditherAmount * 0.5;\nnoiseR2 = noise() * ditherAmount * 0.5;\nditherTPDF_R = noiseR1 + noiseR2;\n\nditherGatedL = gate(g_DITHER, ditherTPDF_L);\nditherGatedR = gate(g_DITHER, ditherTPDF_R);\n\n// (Cálculo de ganancia de reducción movido más arriba, justo tras softkneeLimiter)\n\n// ====================================\n// PROCESAMIENTO CANAL IZQUIERDO\n// ====================================\n// Usar ganancia brickwall y drive sobre la ruta de programa\nleftProcessed = programDrivenL * finalGain_L;\n\n// HPF 1º ORDEN PRE-CEILING (ON/OFF)\n// (mover desde post-makeup a pre-clamp para que el ceiling controle picos del HPF)\n// Coeficiente común (12 Hz)\ndc_fc = 12;\ndc_r  = exp(-2 * pi * dc_fc / samplerate);\n\n// y = x - x_prev + r*y_prev (canal L)\nhpfOutL_pre = (leftProcessed - hpfPrevInL) + dc_r * hpfStateL;\n// Actualizar estados L\nhpfPrevInL = leftProcessed;\nhpfStateL  = hpfOutL_pre;\n\n// Selección ON/OFF antes del clamp\nleftPre = mix(leftProcessed, hpfOutL_pre, smoothedDCFILT);\n\n// Aplicar clipping (SIN dither aquí)\nleftClipped = clamp(leftPre, ceilingNegative, ceilingPositive);\nleftDeltaRaw = programDrivenL - leftClipped;   // delta crudo (antes de makeup)\n\n// Aplicar makeup gain SOLO cuando NO está en modo delta\nleftWithMakeup = leftClipped * makeupLinear;\nleftFinalProcessed = mix(leftClipped, leftWithMakeup, 1 - smoothedDelta);\n\n// (Se asignará después de calcular leftDeltaNorm/rightDeltaNorm)\nleftWithDelta = leftFinalProcessed;\n\n\n// ====================================\n// PROCESAMIENTO CANAL DERECHO\n// ====================================\n// Usar ganancia brickwall y drive sobre la ruta de programa\nrightProcessed = programDrivenR * finalGain_R;\n\n// HPF 1º ORDEN PRE-CEILING (ON/OFF) - canal R\nhpfOutR_pre = (rightProcessed - hpfPrevInR) + dc_r * hpfStateR;\n// Actualizar estados R\nhpfPrevInR = rightProcessed;\nhpfStateR  = hpfOutR_pre;\n\n// Selección ON/OFF antes del clamp\nrightPre = mix(rightProcessed, hpfOutR_pre, smoothedDCFILT);\n\n// Aplicar clipping (SIN dither aquí)\nrightClipped = clamp(rightPre, ceilingNegative, ceilingPositive);\nrightDeltaRaw = programDrivenR - rightClipped; // delta crudo (antes de makeup)\n\n// ====================================\n// DELTA AUTO-NORMALIZADO (RMS corto ~20ms) – POR CANAL\n// ====================================\nrmsTimeSamples = max(1, floor(0.02 * samplerate));     // 20 ms\nrmsCoeff = exp(expConstant / rmsTimeSamples);\n\n// RMS del programa por canal\nprogLSq = programDrivenL * programDrivenL;\nprogRSq = programDrivenR * programDrivenR;\nprogRmsStateL = progRmsStateL * rmsCoeff + progLSq * (1 - rmsCoeff);\nprogRmsStateR = progRmsStateR * rmsCoeff + progRSq * (1 - rmsCoeff);\nprogRmsL = sqrt(max(progRmsStateL, 1e-12));\nprogRmsR = sqrt(max(progRmsStateR, 1e-12));\n\n// RMS del delta por canal\ndeltaLSq = leftDeltaRaw * leftDeltaRaw;\ndeltaRSq = rightDeltaRaw * rightDeltaRaw;\ndeltaRmsStateL = deltaRmsStateL * rmsCoeff + deltaLSq * (1 - rmsCoeff);\ndeltaRmsStateR = deltaRmsStateR * rmsCoeff + deltaRSq * (1 - rmsCoeff);\ndeltaRmsL = sqrt(max(deltaRmsStateL, 1e-12));\ndeltaRmsR = sqrt(max(deltaRmsStateR, 1e-12));\n\n// Normalizar delta al RMS del programa por canal (SOLO HACIA ABAJO: no hacemos boost)\nmaxDeltaBoost = 1; // no se usa para subir; mantenemos por claridad\nnormGainL = min(1, progRmsL / max(deltaRmsL, 1e-12));\nnormGainR = min(1, progRmsR / max(deltaRmsR, 1e-12));\n\n\nleftDeltaNorm  = leftDeltaRaw  * normGainL;\nrightDeltaNorm = rightDeltaRaw * normGainR;\n\n// ====================================\n// DELTA LOUDNESS GUARD (dependiente de GR)\n// ====================================\n// Atenúa el delta cuando la reducción es muy grande para evitar crujidos\n// Ganancia efectiva media (finalGain ya incluye brickwall ∧ envolvente)\ngrLinAvg = (finalGain_L + finalGain_R) * 0.5;\ngrDb = atodb(max(grLinAvg, 1e-12)); // dB <= 0 cuando hay reducción\n\n// Empezar a atenuar delta por encima de 6 dB de GR y llegar a máximo a 18 dB\n// t = 0  -> sin atenuación; t = 1 -> atenuación máxima\n// Factor final: 1.0 -> 0.35 (≈ -9 dB)\nt = clamp((-grDb - 6) / 12, 0, 1);\ndeltaLoudnessFactor = mix(1.0, 0.35, t);\n\nleftDeltaNorm  = leftDeltaNorm  * deltaLoudnessFactor;\nrightDeltaNorm = rightDeltaNorm * deltaLoudnessFactor;\n// ====================================\n// DELTA PEAK SAFETY (evita overs/clip del delta)\n// ====================================\ndeltaPeakGuardL = min(1, ceilingLinear / max(abs(leftDeltaNorm), 1e-12));\ndeltaPeakGuardR = min(1, ceilingLinear / max(abs(rightDeltaNorm), 1e-12));\nleftDeltaSafe  = leftDeltaNorm  * deltaPeakGuardL;\nrightDeltaSafe = rightDeltaNorm * deltaPeakGuardR;\n\n// Aplicar makeup gain SOLO cuando NO está en modo delta\nrightWithMakeup = rightClipped * makeupLinear;\nrightFinalProcessed = mix(rightClipped, rightWithMakeup, 1 - smoothedDelta);\n\n// (Se asignará después de calcular leftDeltaNorm/rightDeltaNorm)\nrightWithDelta = rightFinalProcessed;\n\n// Aplicar delta auto-normalizado (tras el cálculo común)\nleftWithDelta  = mix(leftFinalProcessed,  leftDeltaSafe,  smoothedDelta);\nrightWithDelta = mix(rightFinalProcessed, rightDeltaSafe, smoothedDelta);\n\n// Mezclar con señal original según bypass (tras calcular deltas normalizados)\nleftFinal = mix(delayedLeftOriginal, leftWithDelta, wetAmount);\n\nrightFinal = mix(delayedRightOriginal, rightWithDelta, wetAmount);\n\n// Aplicar dither como último paso (FASE INVERTIDA PARA PRUEBA)\nout2 = rightFinal + ditherGatedR;\nout1 = leftFinal  + ditherGatedL;\n\n// ====================================\n// GAIN REDUCTION OUTPUT - Medidor de reducción para UI\n// ====================================\n// Mostrar la ganancia efectiva (mínimo entre brickwall y envolvente)\nfinalGainDisplay = (min(g_br_L, gainReductionLinear) + min(g_br_R, gainReductionLinear)) * 0.5;\ngainReductionMeter = mix(1, finalGainDisplay, wetAmount);\ngainReductionOutput = clamp(gainReductionMeter, 0, 1);\n\n// ====================================\n// SALIDAS\n// ====================================\n// out1, out2 ya definidas arriba (audio procesado L/R)\nout3 = gainReductionOutput;        // Gain reduction para medidor (0-1) LINEAL\nout4 = leftTrimmed;               // Señal post-trim L (para medidores de entrada)\nout5 = rightTrimmed;              // Señal post-trim R (para medidores de entrada)",
 									"fontface" : 0,
 									"fontname" : "<Monospaced>",
 									"fontsize" : 12.0,
@@ -985,9 +1034,10 @@
  ]
 					}
 ,
-					"patching_rect" : [ 92.0, 389.0, 392.0, 22.0 ],
+					"patching_rect" : [ 98.0, 426.0, 392.0, 22.0 ],
 					"saved_object_attributes" : 					{
 						"autoexport" : 0,
+						"exportfolder" : "Sequoia:/Users/jcb/JUCEProjects/JCBMaximizer/exported-code/",
 						"exportname" : "JCBMaximizer"
 					}
 ,
@@ -1004,7 +1054,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 358.0, 66.0, 560.0, 22.0 ]
+					"patching_rect" : [ 384.0, 54.0, 560.0, 22.0 ]
 				}
 
 			}
@@ -1012,7 +1062,7 @@
 		"lines" : [ 			{
 				"patchline" : 				{
 					"destination" : [ "obj-12", 1 ],
-					"midpoints" : [ 194.75, 435.0, 170.5, 435.0 ],
+					"midpoints" : [ 200.75, 472.0, 176.5, 472.0 ],
 					"order" : 2,
 					"source" : [ "obj-1", 1 ]
 				}
@@ -1021,7 +1071,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-12", 0 ],
-					"midpoints" : [ 101.5, 435.0, 144.5, 435.0 ],
+					"midpoints" : [ 107.5, 472.0, 150.5, 472.0 ],
 					"order" : 0,
 					"source" : [ "obj-1", 0 ]
 				}
@@ -1030,7 +1080,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-20", 0 ],
-					"midpoints" : [ 194.75, 480.5, 205.0, 480.5 ],
+					"midpoints" : [ 200.75, 517.5, 211.0, 517.5 ],
 					"order" : 1,
 					"source" : [ "obj-1", 1 ]
 				}
@@ -1039,7 +1089,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-33", 0 ],
-					"midpoints" : [ 101.5, 507.5, 120.5, 507.5 ],
+					"midpoints" : [ 107.5, 544.5, 126.5, 544.5 ],
 					"order" : 1,
 					"source" : [ "obj-1", 0 ]
 				}
@@ -1048,7 +1098,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-50", 0 ],
-					"midpoints" : [ 194.75, 507.5, 226.5, 507.5 ],
+					"midpoints" : [ 200.75, 544.5, 232.5, 544.5 ],
 					"order" : 0,
 					"source" : [ "obj-1", 1 ]
 				}
@@ -1078,7 +1128,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-6", 0 ],
-					"midpoints" : [ 101.5, 480.5, 101.0, 480.5 ],
+					"midpoints" : [ 107.5, 517.5, 107.0, 517.5 ],
 					"order" : 2,
 					"source" : [ "obj-1", 0 ]
 				}
@@ -1094,7 +1144,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1413.5, 407.0, 1021.5, 407.0 ],
+					"midpoints" : [ 1357.5, 455.0, 928.5, 455.0 ],
 					"source" : [ "obj-103", 0 ]
 				}
 
@@ -1109,7 +1159,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-9", 0 ],
-					"midpoints" : [ 101.5, 143.0, 101.5, 143.0 ],
+					"midpoints" : [ 107.5, 137.0, 107.5, 137.0 ],
 					"source" : [ "obj-11", 0 ]
 				}
 
@@ -1117,7 +1167,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-1", 0 ],
-					"midpoints" : [ 135.5, 372.5, 101.5, 372.5 ],
+					"midpoints" : [ 141.5, 409.5, 107.5, 409.5 ],
 					"source" : [ "obj-14", 0 ]
 				}
 
@@ -1139,7 +1189,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 764.5, 408.88671875, 1021.5, 408.88671875 ],
+					"midpoints" : [ 671.5, 456.88671875, 928.5, 456.88671875 ],
 					"source" : [ "obj-18", 0 ]
 				}
 
@@ -1154,7 +1204,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 692.5, 408.0, 1021.5, 408.0 ],
+					"midpoints" : [ 599.5, 456.0, 928.5, 456.0 ],
 					"source" : [ "obj-2", 0 ]
 				}
 
@@ -1162,15 +1212,23 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-9", 0 ],
-					"midpoints" : [ 67.5, 144.0, 101.5, 144.0 ],
+					"midpoints" : [ 73.5, 138.0, 107.5, 138.0 ],
 					"source" : [ "obj-21", 0 ]
 				}
 
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-13", 0 ],
+					"midpoints" : [ 1463.5, 499.1640625, 928.5, 499.1640625 ],
+					"source" : [ "obj-22", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-1", 0 ],
-					"midpoints" : [ 387.5, 372.5, 101.5, 372.5 ],
+					"midpoints" : [ 445.5, 409.5, 107.5, 409.5 ],
 					"source" : [ "obj-23", 0 ]
 				}
 
@@ -1184,8 +1242,16 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-1", 0 ],
+					"midpoints" : [ 419.5, 412.0, 107.5, 412.0 ],
+					"source" : [ "obj-26", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1482.5, 451.97265625, 1095.25, 451.97265625, 1095.25, 452.04296875, 1021.5, 452.04296875 ],
+					"midpoints" : [ 1426.5, 499.97265625, 1002.25, 499.97265625, 1002.25, 500.04296875, 928.5, 500.04296875 ],
 					"source" : [ "obj-27", 0 ]
 				}
 
@@ -1200,7 +1266,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-9", 0 ],
-					"midpoints" : [ 124.5, 179.0, 101.5, 179.0 ],
+					"midpoints" : [ 130.5, 173.0, 107.5, 173.0 ],
 					"source" : [ "obj-3", 0 ]
 				}
 
@@ -1208,7 +1274,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1080.5, 451.0, 1021.5, 451.0 ],
+					"midpoints" : [ 987.5, 499.0, 928.5, 499.0 ],
 					"source" : [ "obj-30", 0 ]
 				}
 
@@ -1216,7 +1282,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1445.5, 427.0, 1021.5, 427.0 ],
+					"midpoints" : [ 1389.5, 475.0, 928.5, 475.0 ],
 					"source" : [ "obj-31", 0 ]
 				}
 
@@ -1225,6 +1291,13 @@
 				"patchline" : 				{
 					"destination" : [ "obj-62", 0 ],
 					"source" : [ "obj-32", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-22", 0 ],
+					"source" : [ "obj-34", 0 ]
 				}
 
 			}
@@ -1252,7 +1325,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1192.5, 175.0, 1304.5546875, 175.0, 1304.5546875, 229.0, 1304.6875, 229.0, 1304.6875, 451.60546875, 1021.5, 451.60546875 ],
+					"midpoints" : [ 1120.5, 223.0, 1211.5546875, 223.0, 1211.5546875, 277.0, 1211.6875, 277.0, 1211.6875, 499.60546875, 928.5, 499.60546875 ],
 					"source" : [ "obj-39", 0 ]
 				}
 
@@ -1260,7 +1333,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1246.5, 407.0, 1021.5, 407.0 ],
+					"midpoints" : [ 1153.5, 455.0, 928.5, 455.0 ],
 					"source" : [ "obj-40", 0 ]
 				}
 
@@ -1268,7 +1341,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1171.5, 407.0, 1021.5, 407.0 ],
+					"midpoints" : [ 1078.5, 455.0, 928.5, 455.0 ],
 					"source" : [ "obj-41", 0 ]
 				}
 
@@ -1290,7 +1363,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 1384.5, 407.5, 1021.5, 407.5 ],
+					"midpoints" : [ 1328.5, 455.5, 928.5, 455.5 ],
 					"source" : [ "obj-47", 0 ]
 				}
 
@@ -1305,7 +1378,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-1", 0 ],
-					"midpoints" : [ 367.5, 374.0, 101.5, 374.0 ],
+					"midpoints" : [ 393.5, 411.0, 107.5, 411.0 ],
 					"source" : [ "obj-5", 0 ]
 				}
 
@@ -1320,7 +1393,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 837.5, 407.0, 1021.5, 407.0 ],
+					"midpoints" : [ 744.5, 455.0, 928.5, 455.0 ],
 					"source" : [ "obj-62", 0 ]
 				}
 
@@ -1328,7 +1401,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-13", 0 ],
-					"midpoints" : [ 956.5, 409.49609375, 1021.5, 409.49609375 ],
+					"midpoints" : [ 863.5, 457.49609375, 928.5, 457.49609375 ],
 					"source" : [ "obj-7", 0 ]
 				}
 
@@ -1343,7 +1416,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-1", 1 ],
-					"midpoints" : [ 205.0, 318.5, 474.5, 318.5 ],
+					"midpoints" : [ 211.0, 355.5, 480.5, 355.5 ],
 					"order" : 1,
 					"source" : [ "obj-9", 1 ]
 				}
@@ -1352,7 +1425,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-1", 0 ],
-					"midpoints" : [ 101.5, 318.5, 101.5, 318.5 ],
+					"midpoints" : [ 107.5, 355.5, 107.5, 355.5 ],
 					"order" : 0,
 					"source" : [ "obj-9", 0 ]
 				}
@@ -1361,7 +1434,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-17", 0 ],
-					"midpoints" : [ 101.5, 291.5, 84.0, 291.5 ],
+					"midpoints" : [ 107.5, 328.5, 90.0, 328.5 ],
 					"order" : 1,
 					"source" : [ "obj-9", 0 ]
 				}
@@ -1370,7 +1443,7 @@
 , 			{
 				"patchline" : 				{
 					"destination" : [ "obj-4", 0 ],
-					"midpoints" : [ 205.0, 318.5, 492.0, 318.5 ],
+					"midpoints" : [ 211.0, 355.5, 498.0, 355.5 ],
 					"order" : 0,
 					"source" : [ "obj-9", 1 ]
 				}
