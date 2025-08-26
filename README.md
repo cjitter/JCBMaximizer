@@ -61,18 +61,20 @@ cmake --build build-release   # Para Release
 
 ## Características principales
 
-- **Limitador/Maximizador brickwall** con techo ajustable de −60 a 0 dB, enlazando la función comp/lim (soft knee cuadrática) y el clamp absoluto para trabajar de forma musical y sin overs.
-- **Control de ganancia de entrada moderno** (0 a +24 dB) que actúa antes del detector, evitando thresholds negativos.
-- **Detección conmutable Peak/RMS** con ventana de 3 ms y acumuladores protegidos contra denormalización para máxima estabilidad.
-- **Auto-release adaptativo** que ajusta dinámicamente entre 5 y 150 ms según el contenido del programa.
-- **Función Delta normalizada** para escuchar exactamente qué se limita, independiente del ceiling y con loudness guard automático.
-- **Control de envolvente** con tiempos de ataque (0.01–750 ms) y release (1–1000 ms), ajustables en tiempo real.
-- **Lookahead ajustable** de 0 a 5 ms, sin +1 sample oculto y con PDC precisa para todos los hosts.
-- **Filtro pasa-altos opcional a 12 Hz**, aplicado pre-ceiling y con conmutación suavizada.
-- **Control de entrada y salida** (trim y makeup) ±12 dB, solo activo en modo normal (no Delta).
-- **TPDF dither de 16 bits** aplicado como última etapa antes de la salida.
-- **Procesamiento estéreo** con canales siempre vinculados y bypass real contra la señal original delayed.
-- **Visualización en tiempo real**: medidor de reducción de ganancia, gestión de presets (guardar, cargar, eliminar) y tooltips ES/EN.
+- Limitador/Maximizador brickwall con techo ajustable de −60 a 0 dB,
+  combinando un comp/lim de rodilla suave y un clamp absoluto.
+- Ganancia de entrada de 0 a +24 dB, aplicada antes del detector para evitar thresholds negativos.
+- Detección conmutable Peak/RMS con ventana de 3 ms.
+- Control de ataque (0.01–750 ms) y release (1–1000 ms), ajustables en tiempo real.
+- Auto-release que se mueve entre 5 y 150 ms según el material.
+- Función Delta para escuchar qué está limitando, independiente del ceiling y con un guard de loudness.
+- Lookahead de 0 a 5 ms con PDC ajustada al host.
+- Filtro paso-alto opcional a 12 Hz, colocado antes del ceiling.
+- Trims de entrada y salida (±12 dB), activos solo fuera del modo Delta.
+- TPDF dither de 16 bits decorrelacionado.
+- Procesamiento estéreo con canales vinculados.
+- Bypass en Pro Tools suavizado y alineado con el lookahead para evitar clicks al conmutar.
+- Visualización sencilla: medidor de reducción de ganancia, menú presets básico (guardar, cargar, borrar) y tooltips en ES/EN.
 
 ![Diagrama de Bloques](Assets/screenshotDiagram.png)
 
