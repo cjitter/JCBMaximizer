@@ -1,6 +1,6 @@
 ![JCBMaximizer Interface](Assets/screenshot.png)
 
-Plugin maximizador desarrollado en gen~, exportado con [gen~ Plugin Export](https://github.com/Cycling74/gen-plugin-export) y finalizado con el framework C++ [JUCE](https://github.com/juce-framework/JUCE). Este plugin forma parte de un conjunto de herramientas didácticas que utilizo en la asignatura de Técnicas de Grabación y Masterización para Música Electroacústica del [MCE](https://katarinagurska.com/curso-of/master-de-composicion-electroacustica-mce/). Originalmente creado con JUCE 6 hace unos años, el proyecto ha evolucionado significativamente en su interfaz gráfica y funcionalidad gracias al desarrollo con Claude Code durante junio de 2025. Para más detalles técnicos, consulta [NOTAS.md](NOTAS.md).
+Plugin limitador/maximizador desarrollado en gen~, exportado con [gen~ Plugin Export](https://github.com/Cycling74/gen-plugin-export) y finalizado con el framework C++ [JUCE](https://github.com/juce-framework/JUCE). Este plugin forma parte de un conjunto de herramientas didácticas que utilizo en la asignatura de Técnicas de Grabación y Masterización para Música Electroacústica del [MCE](https://katarinagurska.com/curso-of/master-de-composicion-electroacustica-mce/). Originalmente creado con JUCE 6 hace unos años, el proyecto ha evolucionado significativamente en su interfaz gráfica y funcionalidad gracias al desarrollo con Claude Code durante junio de 2025. Para más detalles técnicos, consulta [NOTAS.md](NOTAS.md).
 
 ## Instalación macOS
 1. Descarga el archivo DMG desde la página de [Releases](https://github.com/cjitter/JCBMaximizer/releases)
@@ -61,22 +61,18 @@ cmake --build build-release   # Para Release
 
 ## Características principales
 
-- **Maximizador con limitador brickwall** y techo ajustable de -60 a 0 dB.
-- **Control de ganancia moderno** de 0 a +24 dB (sin threshold negativo).
-- **Detección conmutable Peak/RMS** con ventana deslizante de 3ms.
-- **Auto-release adaptativo** que ajusta dinámicamente entre 5-150ms según el contenido.
-- **Modo Delta inteligente** normalizado para escuchar exactamente qué está limitando, independiente del ceiling.
-- **Control de envolvente** con tiempos de ataque (0.01-750ms) y release (1-1000ms).
-- **Lookahead ajustable** de 0 a 5 ms para anticipar picos.
-- **Control de entrada y salida** (trim y makeup) ±12 dB.
+- **Limitador/Maximizador brickwall** con techo ajustable de −60 a 0 dB, enlazando la función comp/lim (soft knee cuadrática) y el clamp absoluto para trabajar de forma musical y sin overs.
+- **Control de ganancia de entrada moderno** (0 a +24 dB) que actúa antes del detector, evitando thresholds negativos.
+- **Detección conmutable Peak/RMS** con ventana de 3 ms y acumuladores protegidos contra denormalización para máxima estabilidad.
+- **Auto-release adaptativo** que ajusta dinámicamente entre 5 y 150 ms según el contenido del programa.
+- **Función Delta normalizada** para escuchar exactamente qué se limita, independiente del ceiling y con loudness guard automático.
+- **Control de envolvente** con tiempos de ataque (0.01–750 ms) y release (1–1000 ms), ajustables en tiempo real.
+- **Lookahead ajustable** de 0 a 5 ms, sin +1 sample oculto y con PDC precisa para todos los hosts.
+- **Filtro pasa-altos opcional a 12 Hz**, aplicado pre-ceiling y con conmutación suavizada.
+- **Control de entrada y salida** (trim y makeup) ±12 dB, solo activo en modo normal (no Delta).
 - **TPDF dither de 16 bits** aplicado como última etapa antes de la salida.
-- **Función soft knee limiter** interna (actualmente configurada como hard knee).
-- **Procesamiento exclusivamente estéreo**, con canales siempre vinculados.
-- **Visualización gráfica** en tiempo real: medidor de reducción de ganancia.
-- **Gestión completa de presets** con funciones de guardar, guardar como, eliminar, y navegación.
-- **Bypass verdadero**, no afectado por trim de entrada.
-- **Cambio de idioma** dinámico para tooltips (Español/Inglés).
-- **Visualización del diagrama de bloques** con acceso directo al código GenExpr por sección.
+- **Procesamiento estéreo** con canales siempre vinculados y bypass real contra la señal original delayed.
+- **Visualización en tiempo real**: medidor de reducción de ganancia, gestión de presets (guardar, cargar, eliminar) y tooltips ES/EN.
 
 ![Diagrama de Bloques](Assets/screenshotDiagram.png)
 
