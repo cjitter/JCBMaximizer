@@ -1823,7 +1823,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                  presetName.startsWith("Drums_") ||
                  presetName.startsWith("Mastering_")) {  // Añadir más categorías cuando se necesiten
             // Es un factory preset - cargar desde BinaryData
-            // presetName ya tiene el formato correcto (e.g., "General_Plus6")
+            // presetName ya tiene el formato correcto (e.g., "General_Day_Menu")
             
             // Convertir el nombre a formato de recurso BinaryData
             juce::String resourceName = presetName + "_preset";
@@ -3607,8 +3607,9 @@ void JCBMaximizerAudioProcessorEditor::initializeCodeContentCache()
         {"GAIN CORE", BinaryData::GainCore_txt, BinaryData::GainCore_txtSize},  // Corregido: era GainCalc
         //{"MAKEUP", BinaryData::Output_txt, BinaryData::Output_txtSize},
         {"OUTPUT", BinaryData::Output_txt, BinaryData::Output_txtSize},
-        {"DELTA", BinaryData::Output_txt, BinaryData::Output_txtSize}
+        {"DELTA", BinaryData::GainCore_txt, BinaryData::GainCore_txtSize}
     };
+
     
     // Cargar todo en cache
     for (const auto& mapping : mappings) {

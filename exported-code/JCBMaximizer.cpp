@@ -62,7 +62,7 @@ Details of the GPLv3 license can be found at: https://www.gnu.org/licenses/gpl-3
 
 // global noise generator
 Noise noise;
-static const int GENLIB_LOOPCOUNT_BAIL = 100000;
+[[maybe_unused]] static const int GENLIB_LOOPCOUNT_BAIL = 100000;
 
 
 // The State struct contains all the state and procedures for the gendsp kernel

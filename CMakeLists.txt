@@ -130,7 +130,7 @@ juce_add_binary_data(JCBMaximizer_BinaryData
         Assets/code/Detector.txt
         Assets/code/Output.txt
         # Presets de fábrica
-        Assets/FactoryPresets/General_Plus6.preset
+        Assets/FactoryPresets/General_Day_Menu.preset
         # Presets José Peña
         Assets/FactoryPresets/Drums_Sn_Attack.preset
 )

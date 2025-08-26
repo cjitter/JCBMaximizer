@@ -1,29 +1,18 @@
-// =============================================================================
-// DETECTOR BLOCK - Maximizer
-// =============================================================================
-// Sistema de detección con Peak/RMS y auto-release
-//
-// ENTRADAS:
-// - in1: Señal L con trim (sin delay)
-// - in2: Señal R con trim (sin delay)
-//
-// SALIDAS:
-// - out1: Envolvente en dB para cálculo de ganancia
-// - out2: Señal escalada L (para modo delta)
-// - out3: Señal escalada R (para modo delta)
-// - out4: Ceiling suavizado en dB
-// - out5: Trim linear (para normalización delta)
-// - out6: Threshold linear (para normalización delta)
-// =============================================================================
+// in1: Señal L con trim (sin delay desde InputTrim)
+// in2: Señal R con trim (sin delay desde InputTrim)
+
+// out1: Envolvente en dB
+// out2: Ceiling suavizado en dB
+// out3: Threshold linear
+// out4: Ceiling linear
 
 // PARÁMETROS
 Param b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB
-Param a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB) - moderno
+Param a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB)
 Param d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms
 Param e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms
 Param l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)
 Param m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)
-Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim (para calcular normalización)
 
 // HISTORIAS
 History smoothedGain(0);         // Suavizado del gain
@@ -46,96 +35,114 @@ expConstant = -0.99967234081321;
 
 // PROCESAMIENTO
 // Suavizado del gain (conversión a threshold negativo)
-smoothedGain = smoothedGain * SMOOTH_HISTORY_FACTOR + (-a_GAIN) * SMOOTH_PARAM_FACTOR;
+smoothedGain = smoothedGain * 0.999 + (-a_GAIN) * 0.001;
 smoothedGain = fixdenorm(smoothedGain);
 
-smoothedCeiling = smoothedCeiling * SMOOTH_HISTORY_FACTOR + b_CELLING * SMOOTH_PARAM_FACTOR;
+// Conversión de threshold a factor lineal
+thresholdLinear = 1 / pow(10, smoothedGain / 20);
+
+// Suavizado del ceiling
+smoothedCeiling = smoothedCeiling * 0.999 + b_CELLING * 0.001;
 smoothedCeiling = fixdenorm(smoothedCeiling);
 
 // Suavizado de otros parámetros
-smoothedDetect = detectHistory * SMOOTH_HISTORY_FACTOR + l_DETECT * SMOOTH_PARAM_FACTOR;
+smoothedDetect = detectHistory * 0.999 + l_DETECT * 0.001;
 detectHistory = fixdenorm(smoothedDetect);
 
-smoothedAutoRelease = autoReleaseHistory * SMOOTH_HISTORY_FACTOR + m_AUTOREL * SMOOTH_PARAM_FACTOR;
+smoothedAutoRelease = autoReleaseHistory * 0.999 + m_AUTOREL * 0.001;
 autoReleaseHistory = fixdenorm(smoothedAutoRelease);
 
 // Conversión a lineal
 ceilingLinear = dbtoa(b_CELLING);
-thresholdLinear = 1 / pow(10, smoothedGain / 20);
-trimLinear = dbtoa(j_TRIM);
 
-// Aplicar ceiling y threshold a las entradas
+// Aplicar ceiling y threshold a las entradas (ya vienen con trim desde InputTrim)
 rightScaled = ceilingLinear * in2 * thresholdLinear;
 leftScaled = ceilingLinear * in1 * thresholdLinear;
 
 // Promedio de ambos canales para detección
 averageSignal = (leftScaled + rightScaled) * 0.5;
-averageAbs = abs(averageSignal);
+
+// DC-blocker nativo gen~
+detIn = dcblock(averageSignal);
 
 // Peak detection
-peakDetection = averageAbs;
+peakDetection = abs(detIn);
 
-// RMS sliding window (3ms)
+// RMS sliding window (ventana de ~3ms)
 rmsWindowSize = max(1, floor(3 * samplerate * 0.001));
 rmsWindowInv = 1 / rmsWindowSize;
 
-signalSquared = averageSignal * averageSignal;
+// RMS sliding window con detIn
+signalSquared = detIn * detIn;
+
+// PRE-WRITE antes del read
+rmsDelay.write(signalSquared);
+
+// Read correcto con pre-write
 oldestSquared = rmsDelay.read(rmsWindowSize, interp="none");
+
 rmsSumNew = (signalSquared + rmsSum) - oldestSquared;
 rmsSumClipped = max(0, rmsSumNew);
 rmsDetection = sqrt(rmsSumClipped * rmsWindowInv);
 
-rmsSum = rmsSumClipped;
-rmsDelay.write(signalSquared);
+// Historial
+rmsSum = fixdenorm(rmsSumClipped);
 
-// Interpolar entre Peak y RMS
+// Interpolar entre Peak y RMS según el parámetro
 detectionSignal = mix(peakDetection, rmsDetection, smoothedDetect);
 
-// Auto-release
-finalReleaseTime = e_REL;
+// Auto-release: detectar transientes y ajustar release dinámicamente
+finalReleaseTime = e_REL;  // Por defecto usar release manual
 
 if(smoothedAutoRelease > 0.01) {
+    // Calcular cambio en la señal
     signalChange = abs(detectionSignal - prevDetection);
     prevDetection = detectionSignal;
     
-    relativeThreshold = max(0.001, detectionSignal * 0.1);
+    // Detectar si es transiente (cambio rápido) o sostenido
+    relativeThreshold = max(0.001, detectionSignal * 0.1);  // 10% del nivel actual
     isTransient = signalChange > relativeThreshold ? 1 : 0;
     
-    transientSmooth = 0.99;
+    // Suavizar detección de transientes
+    transientSmooth = 0.99;  // Respuesta rápida
     transientDetector = (transientDetector * transientSmooth) + (isTransient * (1 - transientSmooth));
     
-    fastRelease = 5;
-    slowRelease = 150;
+    // Definir rangos de release para limitador
+    fastRelease = 5;     // 5ms para transientes (muy rápido)
+    slowRelease = 150;   // 150ms para material sostenido
     
+    // Interpolar basado en contenido detectado
     autoRelease = mix(slowRelease, fastRelease, transientDetector);
+    
+    // Mezclar release manual con auto
     finalReleaseTime = mix(e_REL, autoRelease, smoothedAutoRelease);
 }
 
-// Constantes de tiempo
+// Constante de tiempo para release final
 releaseTime = finalReleaseTime * 0.001 * samplerate;
 releaseCoeff = exp(expConstant / releaseTime);
 
+// Seguidor de envolvente con release
+envelopeFollower = max(detectionSignal, envelopeFollower * releaseCoeff);
+
+// Constante de tiempo para attack
 attackTime = d_ATK * 0.001 * samplerate;
 attackCoeff = exp(expConstant / attackTime);
 
-// Envelope following
-envelopeFollower = max(detectionSignal, envelopeFollower * releaseCoeff);
-
-// Attack stage
+// Aplicar attack al seguidor de envolvente
 gainReduction = gainReduction * attackCoeff + envelopeFollower * (1 - attackCoeff);
-gainReduction = max(gainReduction, 0.000001);
+gainReduction = max(gainReduction, 0.000001);  // Evitar valores negativos o cero
 gainReduction = fixdenorm(gainReduction);
 
-// Conversión a dB
+// Conversión a dB para procesar con soft knee
 gainReductionDb = atodb(gainReduction);
 
-// Actualizar historiales
+// Actualizar historiales para siguiente muestra
 envelopeFollower = fixdenorm(envelopeFollower);
+prevDetection = detectionSignal;
 
 // SALIDAS
 out1 = gainReductionDb;     // Envolvente en dB
-out2 = leftScaled;          // Señal L escalada para delta
-out3 = rightScaled;         // Señal R escalada para delta
-out4 = smoothedCeiling;     // Ceiling suavizado para GainCalc
-out5 = trimLinear;          // Trim linear para normalización
-out6 = thresholdLinear;     // Threshold linear para normalización
+out2 = smoothedCeiling;     // Ceiling suavizado en dB para GainCalc
+out3 = thresholdLinear;     // Threshold linear
+out4 = ceilingLinear;       // Ceiling linear

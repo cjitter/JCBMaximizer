@@ -623,8 +623,11 @@ private:
                     // Determinar título de ventana: usar "OUTPUT" para bloques específicos
                     juce::String windowTitle = blockName;
                     if (blockName == "LOOKAHEAD" || blockName == "MAKEUP" || 
-                        blockName == "OUTPUT" || blockName == "DELTA") {
+                        blockName == "OUTPUT") {
                         windowTitle = "OUTPUT";
+                    }
+                    else if (blockName == "DELTA") {
+                        windowTitle = "GAIN CORE";
                     }
                     
                     safeOwner->codeWindow->setCode(genCode, windowTitle);

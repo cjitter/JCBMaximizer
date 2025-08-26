@@ -853,9 +853,9 @@ struct Noise {
 	}
     
     Noise() { reset(); }
-	Noise(t_sample seed) { reset(seed); } 
+	Noise(t_sample seed) { reset(seed); }
     
-	void reset(t_sample seed) { 
+	void reset(t_sample seed) {
 	   uint64_t x = (uint64_t)(seed*1E6);
 		state[3] = splitmix32(state[2] = splitmix32(state[1] = splitmix32(state[0] = splitmix32(x))));
 	}
@@ -879,12 +879,12 @@ struct Noise {
         // discard lower 8 bits (exponent), convert to double in 0..2, map to -1..1:
         // exactly quivalent to ldexpf((t_sample)(result >> 8), -23) - 1.0;
 		// but much cheaper on ARM CPU
-		return ((result >> 8)*EXP2_NEG23) - 1.f; 
+		return ((result >> 8)*EXP2_NEG23) - 1.f;
 	}
 	
     // splitmix32 suggested by David Blackman and Sebastiano Vigna as a good seed for xoshiro256+:
 	/* This is a fixed-increment version of Java 8's SplittableRandom generator
-    See http://dx.doi.org/10.1145/2714064.2660195 and 
+    See http://dx.doi.org/10.1145/2714064.2660195 and
     http://docs.oracle.com/javase/8/docs/api/java/util/SplittableRandom.html
     It is a very fast generator passing BigCrush, and it can be useful if
     for some reason you absolutely want 64 bits of state. */
@@ -893,7 +893,7 @@ struct Noise {
 	    z = (z ^ (z >> 33)) * 0x62a9d9ed799705f5;
 	    z = (z ^ (z >> 28)) * 0xcb24d0a5c88c35b3;
 	    return z >> 32;
-    } 
+    }
 };
 #else
 
@@ -913,9 +913,9 @@ struct Noise {
 	}
     
     Noise() { reset(); }
-	Noise(t_sample seed) { reset(seed); } 
+	Noise(t_sample seed) { reset(seed); }
     
-	void reset(t_sample seed) { 
+	void reset(t_sample seed) {
 	   uint64_t x = (uint64_t)(seed*1E6);
 	   state[3] = splitmix64(state[2] = splitmix64(state[1] = splitmix64(state[0] = splitmix64(x))));
 	}
@@ -938,12 +938,12 @@ struct Noise {
         state[3] = (state[3] << 45) | (state[3] >> 19); // rotl(s[3], 45) => (x << k) | (x >> (64 - k))
         // discard lower 11 bits, convert to double in 0..2, map to -1..1:
         // equivalent to ldexp((double)(result >> 11), -52) - 1.0;
-		return ((result >> 11)*EXP2_NEG52) - 1.0; 
+		return ((result >> 11)*EXP2_NEG52) - 1.0;
 	}
 	
     // splitmix64 suggested by David Blackman and Sebastiano Vigna as a good seed for xoshiro256+:
 	/* This is a fixed-increment version of Java 8's SplittableRandom generator
-    See http://dx.doi.org/10.1145/2714064.2660195 and 
+    See http://dx.doi.org/10.1145/2714064.2660195 and
     http://docs.oracle.com/javase/8/docs/api/java/util/SplittableRandom.html
     It is a very fast generator passing BigCrush, and it can be useful if
     for some reason you absolutely want 64 bits of state. */
@@ -952,7 +952,7 @@ struct Noise {
 	    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
 	    z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
 	    return z ^ (z >> 31);
-    }  
+    }
 };
 #endif
 
@@ -1234,11 +1234,11 @@ struct Delay {
 		// plus extra 1 sample compensation for 4-point interpolation
 		const t_sample r = t_sample(size + reader) - clamp(d, t_sample(1.) + t_sample(reader != writer), t_sample(maxdelay));
 		long r0 = long(r);
-		long r1 = r1+1;
-		long r2 = r1+2;
-		long r3 = r1+3;
-		long r4 = r1+4;
-		long r5 = r1+5;
+		long r1 = r0+1;
+		long r2 = r0+2;
+		long r3 = r0+3;
+		long r4 = r0+4;
+		long r5 = r0+5;
 		t_sample a = r - (t_sample)r0;
 		t_sample y0 = memory[r0 & wrap];
 		t_sample y1 = memory[r1 & wrap];

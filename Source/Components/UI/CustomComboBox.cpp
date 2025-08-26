@@ -134,7 +134,7 @@ bool CustomComboBox::hitTest(int x, int y)
 
 void CustomComboBox::addItem(const juce::String& text, int itemId)
 {
-    items.add({text, itemId});
+    items.add({text, itemId, false, false, {}, {}});
 }
 
 void CustomComboBox::addItemList(const juce::StringArray& itemsToAdd, int firstId)
@@ -596,7 +596,6 @@ void CustomComboBox::PopupWindow::ListContainer::mouseMove(const juce::MouseEven
                 auto* topLevel = getTopLevelComponent();
                 if (topLevel != nullptr)
                 {
-                    auto screenBounds = topLevel->getLocalBounds();
                     auto popupBounds = topLevel->getLocalArea(&popupWindow, popupWindow.getLocalBounds());
                     auto subMenuX = popupBounds.getRight();
                     auto subMenuY = popupBounds.getY() + itemBounds.getY();
