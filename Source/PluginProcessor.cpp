@@ -147,12 +147,11 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
 {
     // Configuración de canales en modo debug eliminada para release
     
-    // Inicializar sample rate y vector size
+    // 1) Guardar SR/VS en el estado
     m_PluginState->sr = sampleRate;
     m_PluginState->vs = samplesPerBlock;
     
-    // Pre-asignar buffers con tamaño máximo esperado para evitar allocations en audio thread
-    // Usar un tamaño seguro que cubra la mayoría de casos (4096 samples es común máximo)
+    // 2) Pre-asignar buffers con tamaño máximo esperado para evitar allocations en audio thread
     const long maxExpectedBufferSize = juce::jmax(static_cast<long>(samplesPerBlock), 4096L);
     assureBufferSize(maxExpectedBufferSize);
     
@@ -163,6 +162,30 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
         currentInputSamples.resize(maxWaveformSize);
         currentProcessedSamples.resize(maxWaveformSize);
         currentGainReductionSamples.resize(maxWaveformSize);
+    }
+    
+    // 3) ***CRÍTICO***: sincroniza SR/VS con Gen y re-dimensiona sus delays/constantes
+    //    Esto asegura que Gen use el sampleRate real del host
+    JCBMaximizer::reset(m_PluginState);
+    
+    // 4) Cachear índices de gen para evitar bucles por nombre
+    genIdxLookahead = genIdxBypass = -1;
+    for (int i = 0; i < JCBMaximizer::num_params(); ++i)
+    {
+        const char* raw = JCBMaximizer::getparametername(m_PluginState, i);
+        juce::String name(raw ? raw : "");
+        if (name == "n_LOOKAHEAD") genIdxLookahead = i;
+        if (name == "h_BYPASS")    genIdxBypass   = i;
+    }
+    
+    // 5) Re-sincronizar TODOS los parámetros con Gen~ DESPUÉS del reset
+    for (int i = 0; i < JCBMaximizer::num_params(); i++)
+    {
+        auto paramName = juce::String(JCBMaximizer::getparametername(m_PluginState, i));
+        if (auto* param = apvts.getRawParameterValue(paramName)) {
+            float value = param->load();
+            JCBMaximizer::setparameter(m_PluginState, i, value, nullptr);
+        }
     }
     
     // Calcular latencia inicial
@@ -207,16 +230,6 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     bypassState = hb ? BypassState::Bypassed : BypassState::Active;
     lastWantsBypass = hb;
     
-    // Cachear índices de gen para evitar bucles por nombre
-    genIdxLookahead = genIdxBypass = -1;
-    for (int i = 0; i < JCBMaximizer::num_params(); ++i)
-    {
-        const char* raw = JCBMaximizer::getparametername(m_PluginState, i);
-        juce::String name(raw ? raw : "");
-        if (name == "n_LOOKAHEAD") genIdxLookahead = i;
-        if (name == "h_BYPASS")    genIdxBypass   = i; // h_BYPASS correcto para Maximizer
-    }
-    
     // Inicializar variables de debounce
     if (auto* la = apvts.getRawParameterValue("n_LOOKAHEAD")) {
         stagedLookaheadMs.store(la->load(), std::memory_order_relaxed);
@@ -256,17 +269,6 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // Inicializar buffers de forma de onda
     currentInputSamples.resize(samplesPerBlock, 0.0f);
     currentProcessedSamples.resize(samplesPerBlock, 0.0f);
-    
-    // IMPORTANTE: Re-sincronizar todos los parámetros con Gen~ en prepareToPlay
-    // Esto asegura que los valores estén correctos cuando el DAW comienza a reproducir
-    for (int i = 0; i < JCBMaximizer::num_params(); i++)
-    {
-        auto paramName = juce::String(JCBMaximizer::getparametername(m_PluginState, i));
-        if (auto* param = apvts.getRawParameterValue(paramName)) {
-            float value = param->load();
-            JCBMaximizer::setparameter(m_PluginState, i, value, nullptr);
-        }
-    }
 }
 
 void JCBMaximizerAudioProcessor::releaseResources()
@@ -1115,6 +1117,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
                                                                 juce::NormalisableRange<float>(0.f, 5.f, 0.1f, 1.f),
                                                                 0.f);  // Default corregido: 2 → 0
 
+
+   // o_DCFILT @min 0 @max 1 @default 0 (Filtro DC offset post-procesamiento)
+   auto dcfilter = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("o_DCFILT", versionHint),
+                                                              juce::CharPointer_UTF8("DC Filter"),
+                                                              juce::NormalisableRange<float>(0.f, 1.f, 0.01f, 1.f),
+                                                              0.f,
+                                                              juce::String(),
+                                                              juce::AudioParameterFloat::genericParameter,
+                                                              [](float value, int) { return value < 0.5f ? "OFF" : "ON"; },
+                                                              nullptr);
+
    // Añadir parámetros en orden alfabético (exactamente como Gen~)
    params.push_back(std::move(thd));            // a_THD
    params.push_back(std::move(ceiling));        // b_CELLING
@@ -1128,6 +1141,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
    params.push_back(std::move(detect));         // l_DETECT
    params.push_back(std::move(autorel));        // m_AUTOREL
    params.push_back(std::move(lookahead));      // n_LOOKAHEAD
+   params.push_back(std::move(dcfilter));       // o_DCFILT
 
    // NOTA: El parámetro aax_gr_meter se añade directamente en el constructor
    // para evitar que forme parte del APVTS y el sistema undo/redo

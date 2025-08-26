@@ -282,12 +282,14 @@ private:
         CustomSlider relSlider{"release"};
         juce::TextButton autorelButton{"AUTOREL"};  // NUEVO - parámetro m_AUTOREL
         juce::TextButton ditherButton{"DITHER"};  // MOVIDO desde LeftBottomKnobs para consistencia con posición visual
+        juce::TextButton dcFilterButton{"DC FILTER"};  // NUEVO - filtro DC offset post-procesamiento
         // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
         
         std::unique_ptr<CustomSliderAttachment> atkAttachment;
         std::unique_ptr<CustomSliderAttachment> relAttachment;
         std::unique_ptr<UndoableButtonAttachment> autorelAttachment;  // NUEVO - attachment para m_AUTOREL
         std::unique_ptr<UndoableButtonAttachment> ditherAttachment;  // MOVIDO desde LeftBottomKnobs para consistencia con posición visual
+        std::unique_ptr<UndoableButtonAttachment> dcFilterAttachment;  // NUEVO - attachment para o_DCFILT
         // MAXIMIZER: holdAttachment eliminado - parámetro inexistente
     } rightBottomKnobs;
     
@@ -373,7 +375,7 @@ private:
     //==========================================================================
     
     // Título y versión en la parte inferior (combinado como ExpansorGate)
-    juce::TextButton titleLink{"JCBMaximizer v0.9.1 beta"};
+    juce::TextButton titleLink{"JCBMaximizer v1.0.0-alpha.1"};
     
     // Imágenes de fondo
     juce::ImageComponent backgroundImage;

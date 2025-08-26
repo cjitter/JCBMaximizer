@@ -68,7 +68,7 @@ static const int GENLIB_LOOPCOUNT_BAIL = 100000;
 // The State struct contains all the state and procedures for the gendsp kernel
 typedef struct State {
 	CommonState __commonstate;
-	DCBlock __m_dcblock_34;
+	DCBlock __m_dcblock_44;
 	Delay m_rightInputDelay_2;
 	Delay m_leftInputDelay_3;
 	Delay m_delayDetectRight_4;
@@ -78,33 +78,43 @@ typedef struct State {
 	Delay m_delayDetectLeft_5;
 	int __exception;
 	int vectorsize;
-	t_sample m_k_DELTA_25;
-	t_sample m_j_TRIM_26;
-	t_sample m_l_DETECT_24;
-	t_sample m_n_LOOKAHEAD_22;
-	t_sample m_m_AUTOREL_23;
-	t_sample m_smoothedGain_21;
-	t_sample m_i_MAKEUP_27;
-	t_sample m_g_DITHER_29;
-	t_sample m_b_CELLING_32;
-	t_sample m_h_BYPASS_28;
-	t_sample m_a_GAIN_31;
-	t_sample m_e_REL_30;
+	t_sample m_n_LOOKAHEAD_31;
+	t_sample m_o_DCFILT_32;
+	t_sample m_m_AUTOREL_33;
+	t_sample m_smoothedGain_30;
+	t_sample m_smoothedBypass_28;
+	t_sample m_smoothedCeiling_29;
+	t_sample m_smoothedMakeup_27;
+	t_sample m_envelopeFollower_26;
+	t_sample m_l_DETECT_34;
+	t_sample m_j_TRIM_36;
+	t_sample m_a_GAIN_41;
+	t_sample m_b_CELLING_42;
+	t_sample m_k_DELTA_35;
+	t_sample m_e_REL_40;
+	t_sample m_h_BYPASS_38;
+	t_sample m_g_DITHER_39;
+	t_sample m_i_MAKEUP_37;
 	t_sample samplerate;
-	t_sample m_smoothedCeiling_20;
-	t_sample m_smoothedMakeup_18;
-	t_sample m_transientDetector_10;
-	t_sample m_autoReleaseHistory_11;
-	t_sample m_prevDetection_9;
-	t_sample m_rmsSum_8;
-	t_sample m_smoothedBypass_19;
-	t_sample m_detectHistory_12;
-	t_sample m_trimHistory_14;
-	t_sample m_envelopeFollower_17;
-	t_sample m_deltaHistory_13;
-	t_sample m_d_ATK_33;
-	t_sample m_lookaheadHistory_15;
-	t_sample m_gainReduction_16;
+	t_sample m_gainReduction_25;
+	t_sample m_trimHistory_23;
+	t_sample m_hpfPrevInL_12;
+	t_sample m_deltaRmsStateR_13;
+	t_sample m_deltaRmsStateL_14;
+	t_sample m_hpfPrevInR_11;
+	t_sample m_hpfStateR_9;
+	t_sample m_hpfStateL_10;
+	t_sample m_dcFiltHistory_8;
+	t_sample m_lookaheadHistory_24;
+	t_sample m_progRmsStateR_15;
+	t_sample m_rmsSum_17;
+	t_sample m_d_ATK_43;
+	t_sample m_deltaHistory_22;
+	t_sample m_progRmsStateL_16;
+	t_sample m_autoReleaseHistory_20;
+	t_sample m_prevDetection_18;
+	t_sample m_transientDetector_19;
+	t_sample m_detectHistory_21;
 	// re-initialize all member variables;
 	inline void reset(t_param __sr, int __vs) {
 		__exception = 0;
@@ -117,33 +127,43 @@ typedef struct State {
 		m_delayDetectLeft_5.reset("m_delayDetectLeft_5", samplerate);
 		m_delayRight_6.reset("m_delayRight_6", samplerate);
 		m_delayLeft_7.reset("m_delayLeft_7", samplerate);
-		m_rmsSum_8 = ((int)0);
-		m_prevDetection_9 = ((int)0);
-		m_transientDetector_10 = ((int)0);
-		m_autoReleaseHistory_11 = ((int)0);
-		m_detectHistory_12 = ((int)0);
-		m_deltaHistory_13 = ((int)0);
-		m_trimHistory_14 = ((int)0);
-		m_lookaheadHistory_15 = ((int)0);
-		m_gainReduction_16 = ((int)0);
-		m_envelopeFollower_17 = ((int)0);
-		m_smoothedMakeup_18 = ((int)0);
-		m_smoothedBypass_19 = ((int)0);
-		m_smoothedCeiling_20 = ((int)0);
-		m_smoothedGain_21 = ((int)0);
-		m_n_LOOKAHEAD_22 = 0;
-		m_m_AUTOREL_23 = 0;
-		m_l_DETECT_24 = 0;
-		m_k_DELTA_25 = 0;
-		m_j_TRIM_26 = 0;
-		m_i_MAKEUP_27 = 0;
-		m_h_BYPASS_28 = 0;
-		m_g_DITHER_29 = 0;
-		m_e_REL_30 = 200;
-		m_a_GAIN_31 = 0;
-		m_b_CELLING_32 = -0.3;
-		m_d_ATK_33 = 100;
-		__m_dcblock_34.reset();
+		m_dcFiltHistory_8 = ((int)0);
+		m_hpfStateR_9 = ((int)0);
+		m_hpfStateL_10 = ((int)0);
+		m_hpfPrevInR_11 = ((int)0);
+		m_hpfPrevInL_12 = ((int)0);
+		m_deltaRmsStateR_13 = ((int)0);
+		m_deltaRmsStateL_14 = ((int)0);
+		m_progRmsStateR_15 = ((int)0);
+		m_progRmsStateL_16 = ((int)0);
+		m_rmsSum_17 = ((int)0);
+		m_prevDetection_18 = ((int)0);
+		m_transientDetector_19 = ((int)0);
+		m_autoReleaseHistory_20 = ((int)0);
+		m_detectHistory_21 = ((int)0);
+		m_deltaHistory_22 = ((int)0);
+		m_trimHistory_23 = ((int)0);
+		m_lookaheadHistory_24 = ((int)0);
+		m_gainReduction_25 = ((int)0);
+		m_envelopeFollower_26 = ((int)0);
+		m_smoothedMakeup_27 = ((int)0);
+		m_smoothedBypass_28 = ((int)0);
+		m_smoothedCeiling_29 = ((int)0);
+		m_smoothedGain_30 = ((int)0);
+		m_n_LOOKAHEAD_31 = 0;
+		m_o_DCFILT_32 = 0;
+		m_m_AUTOREL_33 = 0;
+		m_l_DETECT_34 = 0;
+		m_k_DELTA_35 = 0;
+		m_j_TRIM_36 = 0;
+		m_i_MAKEUP_37 = 0;
+		m_h_BYPASS_38 = 0;
+		m_g_DITHER_39 = 0;
+		m_e_REL_40 = 200;
+		m_a_GAIN_41 = 0;
+		m_b_CELLING_42 = -0.3;
+		m_d_ATK_43 = 100;
+		__m_dcblock_44.reset();
 		genlib_reset_complete(this);
 		
 	};
@@ -165,40 +185,47 @@ typedef struct State {
 			return __exception;
 			
 		};
-		t_sample ceilingLinear = dbtoa(m_b_CELLING_32);
-		t_sample maxb_35 = floor(((((int)3) * samplerate) * ((t_sample)0.001)));
-		t_sample rmsWindowSize = ((((int)1) < maxb_35) ? maxb_35 : ((int)1));
+		t_sample ceilingLinear = dbtoa(m_b_CELLING_42);
+		t_sample maxb_45 = floor(((((int)3) * samplerate) * ((t_sample)0.001)));
+		t_sample rmsWindowSize = ((((int)1) < maxb_45) ? maxb_45 : ((int)1));
 		t_sample rmsWindowInv = safediv(((int)1), rmsWindowSize);
-		t_sample attackTime = ((m_d_ATK_33 * ((t_sample)0.001)) * samplerate);
+		t_sample attackTime = ((m_d_ATK_43 * ((t_sample)0.001)) * samplerate);
 		t_sample attackCoeff = exp(safediv(((t_sample)-0.99967234081321), attackTime));
 		t_sample ceilingNegative = (ceilingLinear * ((int)-1));
 		t_sample ceilingPositive = (ceilingLinear * ((int)1));
-		int max_39 = (samplerate - ((int)1));
-		t_sample choice_40 = int(m_g_DITHER_29);
+		int max_49 = (samplerate - ((int)1));
+		t_sample choice_54 = int(m_g_DITHER_39);
+		t_sample choice_55 = int(m_g_DITHER_39);
+		t_sample dc_r = exp(safediv(((t_sample)-75.398223686155), samplerate));
+		t_sample maxb_56 = floor((((t_sample)0.02) * samplerate));
+		t_sample rmsTimeSamples = ((((int)1) < maxb_56) ? maxb_56 : ((int)1));
+		t_sample rmsCoeff = exp(safediv(((t_sample)-0.99967234081321), rmsTimeSamples));
 		// the main sample loop;
 		while ((__n--)) {
 			const t_sample in1 = (*(__in1++));
 			const t_sample in2 = (*(__in2++));
-			t_sample smoothedTrim = ((m_trimHistory_14 * ((t_sample)0.999)) + (m_j_TRIM_26 * ((t_sample)0.001)));
-			m_trimHistory_14 = fixdenorm(smoothedTrim);
+			t_sample smoothedTrim = ((m_trimHistory_23 * ((t_sample)0.999)) + (m_j_TRIM_36 * ((t_sample)0.001)));
+			m_trimHistory_23 = fixdenorm(smoothedTrim);
 			t_sample trimLinear = dbtoa(smoothedTrim);
-			m_smoothedGain_21 = ((m_smoothedGain_21 * ((t_sample)0.999)) + ((-m_a_GAIN_31) * ((t_sample)0.001)));
-			m_smoothedGain_21 = fixdenorm(m_smoothedGain_21);
-			t_sample thresholdLinear = safediv(((int)1), safepow(((int)10), (m_smoothedGain_21 * ((t_sample)0.05))));
-			m_smoothedCeiling_20 = ((m_smoothedCeiling_20 * ((t_sample)0.999)) + (m_b_CELLING_32 * ((t_sample)0.001)));
-			m_smoothedCeiling_20 = fixdenorm(m_smoothedCeiling_20);
-			m_smoothedBypass_19 = ((m_smoothedBypass_19 * ((t_sample)0.999)) + (m_h_BYPASS_28 * ((t_sample)0.001)));
-			m_smoothedBypass_19 = fixdenorm(m_smoothedBypass_19);
-			t_sample wetAmount = (((int)1) - m_smoothedBypass_19);
-			m_smoothedMakeup_18 = ((m_smoothedMakeup_18 * ((t_sample)0.999)) + (m_i_MAKEUP_27 * ((t_sample)0.001)));
-			m_smoothedMakeup_18 = fixdenorm(m_smoothedMakeup_18);
-			t_sample makeupLinear = dbtoa(m_smoothedMakeup_18);
-			t_sample smoothedDelta = ((m_deltaHistory_13 * ((t_sample)0.999)) + (m_k_DELTA_25 * ((t_sample)0.001)));
-			m_deltaHistory_13 = fixdenorm(smoothedDelta);
-			t_sample smoothedDetect = ((m_detectHistory_12 * ((t_sample)0.999)) + (m_l_DETECT_24 * ((t_sample)0.001)));
-			m_detectHistory_12 = fixdenorm(smoothedDetect);
-			t_sample smoothedAutoRelease = ((m_autoReleaseHistory_11 * ((t_sample)0.999)) + (m_m_AUTOREL_23 * ((t_sample)0.001)));
-			m_autoReleaseHistory_11 = fixdenorm(smoothedAutoRelease);
+			m_smoothedGain_30 = ((m_smoothedGain_30 * ((t_sample)0.999)) + ((-m_a_GAIN_41) * ((t_sample)0.001)));
+			m_smoothedGain_30 = fixdenorm(m_smoothedGain_30);
+			t_sample thresholdLinear = safediv(((int)1), safepow(((int)10), (m_smoothedGain_30 * ((t_sample)0.05))));
+			m_smoothedCeiling_29 = ((m_smoothedCeiling_29 * ((t_sample)0.999)) + (m_b_CELLING_42 * ((t_sample)0.001)));
+			m_smoothedCeiling_29 = fixdenorm(m_smoothedCeiling_29);
+			m_smoothedBypass_28 = ((m_smoothedBypass_28 * ((t_sample)0.999)) + (m_h_BYPASS_38 * ((t_sample)0.001)));
+			m_smoothedBypass_28 = fixdenorm(m_smoothedBypass_28);
+			t_sample wetAmount = (((int)1) - m_smoothedBypass_28);
+			m_smoothedMakeup_27 = ((m_smoothedMakeup_27 * ((t_sample)0.999)) + (m_i_MAKEUP_37 * ((t_sample)0.001)));
+			m_smoothedMakeup_27 = fixdenorm(m_smoothedMakeup_27);
+			t_sample makeupLinear = dbtoa(m_smoothedMakeup_27);
+			t_sample smoothedDelta = ((m_deltaHistory_22 * ((t_sample)0.999)) + (m_k_DELTA_35 * ((t_sample)0.001)));
+			m_deltaHistory_22 = fixdenorm(smoothedDelta);
+			t_sample smoothedDetect = ((m_detectHistory_21 * ((t_sample)0.999)) + (m_l_DETECT_34 * ((t_sample)0.001)));
+			m_detectHistory_21 = fixdenorm(smoothedDetect);
+			t_sample smoothedAutoRelease = ((m_autoReleaseHistory_20 * ((t_sample)0.999)) + (m_m_AUTOREL_33 * ((t_sample)0.001)));
+			m_autoReleaseHistory_20 = fixdenorm(smoothedAutoRelease);
+			t_sample smoothedDCFILT = ((m_dcFiltHistory_8 * ((t_sample)0.95)) + (m_o_DCFILT_32 * ((t_sample)0.05)));
+			m_dcFiltHistory_8 = fixdenorm(smoothedDCFILT);
 			t_sample leftTrimmed = (in1 * trimLinear);
 			t_sample rightTrimmed = (in2 * trimLinear);
 			t_sample rightScaled = ((ceilingLinear * rightTrimmed) * thresholdLinear);
@@ -210,83 +237,142 @@ typedef struct State {
 			m_leftInputDelay_3.write(in1);
 			m_rightInputDelay_2.write(in2);
 			t_sample averageSignal = ((leftScaled + rightScaled) * ((t_sample)0.5));
-			t_sample detIn = __m_dcblock_34(averageSignal);
+			t_sample detIn = __m_dcblock_44(averageSignal);
 			t_sample peakDetection = fabs(detIn);
 			t_sample signalSquared = (detIn * detIn);
 			m_rmsDelay_1.write(signalSquared);
 			t_sample oldestSquared = m_rmsDelay_1.read_step(rmsWindowSize);
-			t_sample rmsSumNew = ((signalSquared + m_rmsSum_8) - oldestSquared);
+			t_sample rmsSumNew = ((signalSquared + m_rmsSum_17) - oldestSquared);
 			t_sample rmsSumClipped = ((((int)0) < rmsSumNew) ? rmsSumNew : ((int)0));
 			t_sample rmsDetection = sqrt((rmsSumClipped * rmsWindowInv));
-			m_rmsSum_8 = fixdenorm(rmsSumClipped);
-			t_sample mix_7524 = (peakDetection + (smoothedDetect * (rmsDetection - peakDetection)));
-			t_sample detectionSignal = mix_7524;
-			t_sample finalReleaseTime = m_e_REL_30;
+			m_rmsSum_17 = fixdenorm(rmsSumClipped);
+			t_sample mix_1537 = (peakDetection + (smoothedDetect * (rmsDetection - peakDetection)));
+			t_sample detectionSignal = mix_1537;
+			t_sample finalReleaseTime = m_e_REL_40;
 			if ((smoothedAutoRelease > ((t_sample)0.01))) {
-				t_sample signalChange = fabs((detectionSignal - m_prevDetection_9));
-				m_prevDetection_9 = detectionSignal;
-				t_sample maxb_36 = (detectionSignal * ((t_sample)0.1));
-				t_sample relativeThreshold = ((((t_sample)0.001) < maxb_36) ? maxb_36 : ((t_sample)0.001));
-				int cond_37 = (signalChange > relativeThreshold);
-				int isTransient = (cond_37 ? ((int)1) : ((int)0));
-				m_transientDetector_10 = ((m_transientDetector_10 * ((t_sample)0.99)) + (isTransient * ((t_sample)0.01)));
-				t_sample mix_7525 = (((int)150) + (m_transientDetector_10 * ((int)-145)));
-				t_sample autoRelease = mix_7525;
-				t_sample mix_7526 = (m_e_REL_30 + (smoothedAutoRelease * (autoRelease - m_e_REL_30)));
-				finalReleaseTime = mix_7526;
+				t_sample signalChange = fabs((detectionSignal - m_prevDetection_18));
+				m_prevDetection_18 = detectionSignal;
+				t_sample maxb_46 = (detectionSignal * ((t_sample)0.1));
+				t_sample relativeThreshold = ((((t_sample)0.001) < maxb_46) ? maxb_46 : ((t_sample)0.001));
+				int cond_47 = (signalChange > relativeThreshold);
+				int isTransient = (cond_47 ? ((int)1) : ((int)0));
+				m_transientDetector_19 = ((m_transientDetector_19 * ((t_sample)0.99)) + (isTransient * ((t_sample)0.01)));
+				t_sample mix_1538 = (((int)150) + (m_transientDetector_19 * ((int)-145)));
+				t_sample autoRelease = mix_1538;
+				t_sample mix_1539 = (m_e_REL_40 + (smoothedAutoRelease * (autoRelease - m_e_REL_40)));
+				finalReleaseTime = mix_1539;
 				
 			};
 			t_sample releaseTime = ((finalReleaseTime * ((t_sample)0.001)) * samplerate);
 			t_sample releaseCoeff = exp(safediv(((t_sample)-0.99967234081321), releaseTime));
-			t_sample maxb_38 = (m_envelopeFollower_17 * releaseCoeff);
-			m_envelopeFollower_17 = ((detectionSignal < maxb_38) ? maxb_38 : detectionSignal);
-			m_gainReduction_16 = ((m_gainReduction_16 * attackCoeff) + (m_envelopeFollower_17 * (((int)1) - attackCoeff)));
-			m_gainReduction_16 = ((m_gainReduction_16 < ((t_sample)1e-06)) ? ((t_sample)1e-06) : m_gainReduction_16);
-			m_gainReduction_16 = fixdenorm(m_gainReduction_16);
-			t_sample gainReductionDb = atodb(m_gainReduction_16);
-			m_envelopeFollower_17 = fixdenorm(m_envelopeFollower_17);
-			t_sample limitedDb = softkneeLimiter_d_d_i(gainReductionDb, m_smoothedCeiling_20, ((int)0));
-			t_sample smoothedLookahead = ((m_lookaheadHistory_15 * ((t_sample)0.99)) + (m_n_LOOKAHEAD_22 * ((t_sample)0.01)));
-			m_lookaheadHistory_15 = fixdenorm(smoothedLookahead);
+			t_sample maxb_48 = (m_envelopeFollower_26 * releaseCoeff);
+			m_envelopeFollower_26 = ((detectionSignal < maxb_48) ? maxb_48 : detectionSignal);
+			m_gainReduction_25 = ((m_gainReduction_25 * attackCoeff) + (m_envelopeFollower_26 * (((int)1) - attackCoeff)));
+			m_gainReduction_25 = ((m_gainReduction_25 < ((t_sample)1e-06)) ? ((t_sample)1e-06) : m_gainReduction_25);
+			m_gainReduction_25 = fixdenorm(m_gainReduction_25);
+			t_sample gainReductionDb = atodb(m_gainReduction_25);
+			m_envelopeFollower_26 = fixdenorm(m_envelopeFollower_26);
+			t_sample limitedDb = softkneeLimiter_d_d_i(gainReductionDb, m_smoothedCeiling_29, ((int)0));
+			t_sample gainReductionAmount = (limitedDb - gainReductionDb);
+			t_sample gainReductionAmount_1506 = ((gainReductionAmount < ((int)-144)) ? ((int)-144) : gainReductionAmount);
+			t_sample gainReductionLinear = dbtoa(gainReductionAmount_1506);
+			t_sample smoothedLookahead = ((m_lookaheadHistory_24 * ((t_sample)0.99)) + (m_n_LOOKAHEAD_31 * ((t_sample)0.01)));
+			m_lookaheadHistory_24 = fixdenorm(smoothedLookahead);
 			t_sample lookaheadSamples = round((smoothedLookahead * (samplerate * 0.001)));
-			t_sample lh = ((lookaheadSamples <= ((int)0)) ? ((int)0) : ((lookaheadSamples >= max_39) ? max_39 : lookaheadSamples));
-			t_sample delayedDetectLeft = m_delayDetectLeft_5.read_step(lh);
-			t_sample delayedDetectRight = m_delayDetectRight_4.read_step(lh);
+			t_sample lh = ((lookaheadSamples <= ((int)0)) ? ((int)0) : ((lookaheadSamples >= max_49) ? max_49 : lookaheadSamples));
+			t_sample delayedLeft = m_delayLeft_7.read_step(lh);
+			t_sample delayedRight = m_delayRight_6.read_step(lh);
 			t_sample delayedLeftOriginal = m_leftInputDelay_3.read_step(lh);
 			t_sample delayedRightOriginal = m_rightInputDelay_2.read_step(lh);
-			t_sample noise1 = ((noise() * ((t_sample)1.5258789062e-05)) * ((t_sample)0.5));
-			t_sample noise2 = ((noise() * ((t_sample)1.5258789062e-05)) * ((t_sample)0.5));
-			t_sample ditherTPDF = (noise1 + noise2);
-			t_sample ditherGated = (((choice_40 >= 1) && (choice_40 < 2)) ? ditherTPDF : 0);
-			t_sample gainReductionAmount = (limitedDb - gainReductionDb);
-			t_sample gainReductionAmount_7500 = ((gainReductionAmount < ((int)-144)) ? ((int)-144) : gainReductionAmount);
-			t_sample gainReductionLinear = dbtoa(gainReductionAmount_7500);
-			t_sample totalGainApplied = (trimLinear * thresholdLinear);
-			t_sample leftProcessed = (delayedDetectLeft * gainReductionLinear);
-			t_sample leftClipped = ((leftProcessed <= ceilingNegative) ? ceilingNegative : ((leftProcessed >= ceilingPositive) ? ceilingPositive : leftProcessed));
+			t_sample programL = delayedLeft;
+			t_sample programR = delayedRight;
+			t_sample programDrivenL = (programL * thresholdLinear);
+			t_sample programDrivenR = (programR * thresholdLinear);
+			t_sample maxa_50 = fabs(programDrivenL);
+			t_sample minb_51 = safediv(ceilingLinear, ((maxa_50 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : maxa_50));
+			t_sample g_br_L = ((minb_51 < ((int)1)) ? minb_51 : ((int)1));
+			t_sample maxa_52 = fabs(programDrivenR);
+			t_sample minb_53 = safediv(ceilingLinear, ((maxa_52 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : maxa_52));
+			t_sample g_br_R = ((minb_53 < ((int)1)) ? minb_53 : ((int)1));
+			t_sample finalGain_L = ((gainReductionLinear < g_br_L) ? gainReductionLinear : g_br_L);
+			t_sample finalGain_R = ((gainReductionLinear < g_br_R) ? gainReductionLinear : g_br_R);
+			t_sample noiseL1 = ((noise() * ((t_sample)1.5258789062e-05)) * ((t_sample)0.5));
+			t_sample noiseL2 = ((noise() * ((t_sample)1.5258789062e-05)) * ((t_sample)0.5));
+			t_sample ditherTPDF_L = (noiseL1 + noiseL2);
+			t_sample noiseR1 = ((noise() * ((t_sample)1.5258789062e-05)) * ((t_sample)0.5));
+			t_sample noiseR2 = ((noise() * ((t_sample)1.5258789062e-05)) * ((t_sample)0.5));
+			t_sample ditherTPDF_R = (noiseR1 + noiseR2);
+			t_sample ditherGatedL = (((choice_54 >= 1) && (choice_54 < 2)) ? ditherTPDF_L : 0);
+			t_sample ditherGatedR = (((choice_55 >= 1) && (choice_55 < 2)) ? ditherTPDF_R : 0);
+			t_sample leftProcessed = (programDrivenL * finalGain_L);
+			t_sample hpfOutL_pre = ((leftProcessed - m_hpfPrevInL_12) + (dc_r * m_hpfStateL_10));
+			m_hpfPrevInL_12 = leftProcessed;
+			m_hpfStateL_10 = hpfOutL_pre;
+			t_sample mix_1540 = (leftProcessed + (smoothedDCFILT * (hpfOutL_pre - leftProcessed)));
+			t_sample leftPre = mix_1540;
+			t_sample leftClipped = ((leftPre <= ceilingNegative) ? ceilingNegative : ((leftPre >= ceilingPositive) ? ceilingPositive : leftPre));
+			t_sample leftDeltaRaw = (programDrivenL - leftClipped);
 			t_sample leftWithMakeup = (leftClipped * makeupLinear);
-			t_sample sub_7528 = (((int)1) - smoothedDelta);
-			t_sample mix_7527 = (leftClipped + (sub_7528 * (leftWithMakeup - leftClipped)));
-			t_sample leftDelta = safediv((delayedDetectLeft - leftClipped), (ceilingLinear * ((totalGainApplied < ((int)1)) ? ((int)1) : totalGainApplied)));
-			t_sample mix_7529 = (mix_7527 + (smoothedDelta * (leftDelta - mix_7527)));
-			t_sample mix_7530 = (delayedLeftOriginal + (wetAmount * (mix_7529 - delayedLeftOriginal)));
-			t_sample expr_7501 = (mix_7530 + ditherGated);
-			t_sample rightProcessed = (delayedDetectRight * gainReductionLinear);
-			t_sample rightClipped = ((rightProcessed <= ceilingNegative) ? ceilingNegative : ((rightProcessed >= ceilingPositive) ? ceilingPositive : rightProcessed));
+			t_sample sub_1542 = (((int)1) - smoothedDelta);
+			t_sample mix_1541 = (leftClipped + (sub_1542 * (leftWithMakeup - leftClipped)));
+			t_sample rightProcessed = (programDrivenR * finalGain_R);
+			t_sample hpfOutR_pre = ((rightProcessed - m_hpfPrevInR_11) + (dc_r * m_hpfStateR_9));
+			m_hpfPrevInR_11 = rightProcessed;
+			m_hpfStateR_9 = hpfOutR_pre;
+			t_sample mix_1543 = (rightProcessed + (smoothedDCFILT * (hpfOutR_pre - rightProcessed)));
+			t_sample rightPre = mix_1543;
+			t_sample rightClipped = ((rightPre <= ceilingNegative) ? ceilingNegative : ((rightPre >= ceilingPositive) ? ceilingPositive : rightPre));
+			t_sample rightDeltaRaw = (programDrivenR - rightClipped);
+			t_sample progLSq = (programDrivenL * programDrivenL);
+			t_sample progRSq = (programDrivenR * programDrivenR);
+			m_progRmsStateL_16 = ((m_progRmsStateL_16 * rmsCoeff) + (progLSq * (((int)1) - rmsCoeff)));
+			m_progRmsStateR_15 = ((m_progRmsStateR_15 * rmsCoeff) + (progRSq * (((int)1) - rmsCoeff)));
+			t_sample progRmsL = sqrt(((m_progRmsStateL_16 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : m_progRmsStateL_16));
+			t_sample progRmsR = sqrt(((m_progRmsStateR_15 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : m_progRmsStateR_15));
+			t_sample deltaLSq = (leftDeltaRaw * leftDeltaRaw);
+			t_sample deltaRSq = (rightDeltaRaw * rightDeltaRaw);
+			m_deltaRmsStateL_14 = ((m_deltaRmsStateL_14 * rmsCoeff) + (deltaLSq * (((int)1) - rmsCoeff)));
+			m_deltaRmsStateR_13 = ((m_deltaRmsStateR_13 * rmsCoeff) + (deltaRSq * (((int)1) - rmsCoeff)));
+			t_sample deltaRmsL = sqrt(((m_deltaRmsStateL_14 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : m_deltaRmsStateL_14));
+			t_sample deltaRmsR = sqrt(((m_deltaRmsStateR_13 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : m_deltaRmsStateR_13));
+			t_sample minb_57 = safediv(progRmsL, ((deltaRmsL < ((t_sample)1e-12)) ? ((t_sample)1e-12) : deltaRmsL));
+			t_sample normGainL = ((minb_57 < ((int)1)) ? minb_57 : ((int)1));
+			t_sample minb_58 = safediv(progRmsR, ((deltaRmsR < ((t_sample)1e-12)) ? ((t_sample)1e-12) : deltaRmsR));
+			t_sample normGainR = ((minb_58 < ((int)1)) ? minb_58 : ((int)1));
+			t_sample leftDeltaNorm = (leftDeltaRaw * normGainL);
+			t_sample rightDeltaNorm = (rightDeltaRaw * normGainR);
+			t_sample grLinAvg = ((finalGain_L + finalGain_R) * ((t_sample)0.5));
+			t_sample grDb = atodb(((grLinAvg < ((t_sample)1e-12)) ? ((t_sample)1e-12) : grLinAvg));
+			t_sample v_59 = (((-grDb) - ((int)6)) * ((t_sample)0.083333333333333));
+			t_sample t = ((v_59 <= ((int)0)) ? ((int)0) : ((v_59 >= ((int)1)) ? ((int)1) : v_59));
+			t_sample mix_1544 = (((int)1) + (t * ((t_sample)-0.65)));
+			t_sample leftDeltaNorm_1507 = (leftDeltaNorm * mix_1544);
+			t_sample rightDeltaNorm_1508 = (rightDeltaNorm * mix_1544);
+			t_sample maxa_60 = fabs(leftDeltaNorm_1507);
+			t_sample minb_61 = safediv(ceilingLinear, ((maxa_60 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : maxa_60));
+			t_sample deltaPeakGuardL = ((minb_61 < ((int)1)) ? minb_61 : ((int)1));
+			t_sample maxa_62 = fabs(rightDeltaNorm_1508);
+			t_sample minb_63 = safediv(ceilingLinear, ((maxa_62 < ((t_sample)1e-12)) ? ((t_sample)1e-12) : maxa_62));
+			t_sample deltaPeakGuardR = ((minb_63 < ((int)1)) ? minb_63 : ((int)1));
+			t_sample leftDeltaSafe = (leftDeltaNorm_1507 * deltaPeakGuardL);
+			t_sample rightDeltaSafe = (rightDeltaNorm_1508 * deltaPeakGuardR);
 			t_sample rightWithMakeup = (rightClipped * makeupLinear);
-			t_sample sub_7532 = (((int)1) - smoothedDelta);
-			t_sample mix_7531 = (rightClipped + (sub_7532 * (rightWithMakeup - rightClipped)));
-			t_sample rightDelta = safediv((delayedDetectRight - rightClipped), (ceilingLinear * ((totalGainApplied < ((int)1)) ? ((int)1) : totalGainApplied)));
-			t_sample mix_7533 = (mix_7531 + (smoothedDelta * (rightDelta - mix_7531)));
-			t_sample mix_7534 = (delayedRightOriginal + (wetAmount * (mix_7533 - delayedRightOriginal)));
-			t_sample expr_7502 = (mix_7534 + ditherGated);
-			t_sample mix_7535 = (((int)1) + (wetAmount * (gainReductionLinear - ((int)1))));
-			t_sample gainReductionOutput = ((mix_7535 <= ((int)0)) ? ((int)0) : ((mix_7535 >= ((int)1)) ? ((int)1) : mix_7535));
-			t_sample out1 = expr_7501;
-			t_sample out4 = leftTrimmed;
-			t_sample out2 = expr_7502;
-			t_sample out3 = gainReductionOutput;
+			t_sample sub_1546 = (((int)1) - smoothedDelta);
+			t_sample mix_1545 = (rightClipped + (sub_1546 * (rightWithMakeup - rightClipped)));
+			t_sample mix_1547 = (mix_1541 + (smoothedDelta * (leftDeltaSafe - mix_1541)));
+			t_sample mix_1548 = (mix_1545 + (smoothedDelta * (rightDeltaSafe - mix_1545)));
+			t_sample mix_1549 = (delayedLeftOriginal + (wetAmount * (mix_1547 - delayedLeftOriginal)));
+			t_sample mix_1550 = (delayedRightOriginal + (wetAmount * (mix_1548 - delayedRightOriginal)));
+			t_sample expr_1512 = (mix_1550 + ditherGatedR);
+			t_sample expr_1511 = (mix_1549 + ditherGatedL);
+			t_sample finalGainDisplay = ((((gainReductionLinear < g_br_L) ? gainReductionLinear : g_br_L) + ((gainReductionLinear < g_br_R) ? gainReductionLinear : g_br_R)) * ((t_sample)0.5));
+			t_sample mix_1551 = (((int)1) + (wetAmount * (finalGainDisplay - ((int)1))));
+			t_sample gainReductionOutput = ((mix_1551 <= ((int)0)) ? ((int)0) : ((mix_1551 >= ((int)1)) ? ((int)1) : mix_1551));
 			t_sample out5 = rightTrimmed;
+			t_sample out4 = leftTrimmed;
+			t_sample out1 = expr_1511;
+			t_sample out2 = expr_1512;
+			t_sample out3 = gainReductionOutput;
 			m_rmsDelay_1.step();
 			m_rightInputDelay_2.step();
 			m_leftInputDelay_3.step();
@@ -306,40 +392,43 @@ typedef struct State {
 		
 	};
 	inline void set_n_LOOKAHEAD(t_param _value) {
-		m_n_LOOKAHEAD_22 = (_value < 0 ? 0 : (_value > 5 ? 5 : _value));
+		m_n_LOOKAHEAD_31 = (_value < 0 ? 0 : (_value > 5 ? 5 : _value));
+	};
+	inline void set_o_DCFILT(t_param _value) {
+		m_o_DCFILT_32 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
 	};
 	inline void set_m_AUTOREL(t_param _value) {
-		m_m_AUTOREL_23 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
+		m_m_AUTOREL_33 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
 	};
 	inline void set_l_DETECT(t_param _value) {
-		m_l_DETECT_24 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
+		m_l_DETECT_34 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
 	};
 	inline void set_k_DELTA(t_param _value) {
-		m_k_DELTA_25 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
+		m_k_DELTA_35 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
 	};
 	inline void set_j_TRIM(t_param _value) {
-		m_j_TRIM_26 = (_value < -12 ? -12 : (_value > 12 ? 12 : _value));
+		m_j_TRIM_36 = (_value < -12 ? -12 : (_value > 12 ? 12 : _value));
 	};
 	inline void set_i_MAKEUP(t_param _value) {
-		m_i_MAKEUP_27 = (_value < -12 ? -12 : (_value > 12 ? 12 : _value));
+		m_i_MAKEUP_37 = (_value < -12 ? -12 : (_value > 12 ? 12 : _value));
 	};
 	inline void set_h_BYPASS(t_param _value) {
-		m_h_BYPASS_28 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
+		m_h_BYPASS_38 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
 	};
 	inline void set_g_DITHER(t_param _value) {
-		m_g_DITHER_29 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
+		m_g_DITHER_39 = (_value < 0 ? 0 : (_value > 1 ? 1 : _value));
 	};
 	inline void set_e_REL(t_param _value) {
-		m_e_REL_30 = (_value < 1 ? 1 : (_value > 1000 ? 1000 : _value));
+		m_e_REL_40 = (_value < 1 ? 1 : (_value > 1000 ? 1000 : _value));
 	};
 	inline void set_a_GAIN(t_param _value) {
-		m_a_GAIN_31 = (_value < 0 ? 0 : (_value > 24 ? 24 : _value));
+		m_a_GAIN_41 = (_value < 0 ? 0 : (_value > 24 ? 24 : _value));
 	};
 	inline void set_b_CELLING(t_param _value) {
-		m_b_CELLING_32 = (_value < -60 ? -60 : (_value > 0 ? 0 : _value));
+		m_b_CELLING_42 = (_value < -60 ? -60 : (_value > 0 ? 0 : _value));
 	};
 	inline void set_d_ATK(t_param _value) {
-		m_d_ATK_33 = (_value < 0.01 ? 0.01 : (_value > 750 ? 750 : _value));
+		m_d_ATK_43 = (_value < 0.01 ? 0.01 : (_value > 750 ? 750 : _value));
 	};
 	inline t_sample softkneeLimiter_d_d_i(t_sample xg, t_sample threshold, int kneeWidth) {
 		t_sample ret = ((int)0);
@@ -377,7 +466,7 @@ int gen_kernel_numouts = 5;
 
 int num_inputs() { return gen_kernel_numins; }
 int num_outputs() { return gen_kernel_numouts; }
-int num_params() { return 12; }
+int num_params() { return 13; }
 
 /// Assistive lables for the signal inputs and outputs
 
@@ -415,6 +504,7 @@ void setparameter(CommonState *cself, long index, t_param value, void *ref) {
 		case 9: self->set_l_DETECT(value); break;
 		case 10: self->set_m_AUTOREL(value); break;
 		case 11: self->set_n_LOOKAHEAD(value); break;
+		case 12: self->set_o_DCFILT(value); break;
 		
 		default: break;
 	}
@@ -425,18 +515,19 @@ void setparameter(CommonState *cself, long index, t_param value, void *ref) {
 void getparameter(CommonState *cself, long index, t_param *value) {
 	State *self = (State *)cself;
 	switch (index) {
-		case 0: *value = self->m_a_GAIN_31; break;
-		case 1: *value = self->m_b_CELLING_32; break;
-		case 2: *value = self->m_d_ATK_33; break;
-		case 3: *value = self->m_e_REL_30; break;
-		case 4: *value = self->m_g_DITHER_29; break;
-		case 5: *value = self->m_h_BYPASS_28; break;
-		case 6: *value = self->m_i_MAKEUP_27; break;
-		case 7: *value = self->m_j_TRIM_26; break;
-		case 8: *value = self->m_k_DELTA_25; break;
-		case 9: *value = self->m_l_DETECT_24; break;
-		case 10: *value = self->m_m_AUTOREL_23; break;
-		case 11: *value = self->m_n_LOOKAHEAD_22; break;
+		case 0: *value = self->m_a_GAIN_41; break;
+		case 1: *value = self->m_b_CELLING_42; break;
+		case 2: *value = self->m_d_ATK_43; break;
+		case 3: *value = self->m_e_REL_40; break;
+		case 4: *value = self->m_g_DITHER_39; break;
+		case 5: *value = self->m_h_BYPASS_38; break;
+		case 6: *value = self->m_i_MAKEUP_37; break;
+		case 7: *value = self->m_j_TRIM_36; break;
+		case 8: *value = self->m_k_DELTA_35; break;
+		case 9: *value = self->m_l_DETECT_34; break;
+		case 10: *value = self->m_m_AUTOREL_33; break;
+		case 11: *value = self->m_n_LOOKAHEAD_31; break;
+		case 12: *value = self->m_o_DCFILT_32; break;
 		
 		default: break;
 	}
@@ -517,13 +608,13 @@ void *create(t_param sr, long vs) {
 	self->__commonstate.numouts = gen_kernel_numouts;
 	self->__commonstate.sr = sr;
 	self->__commonstate.vs = vs;
-	self->__commonstate.params = (ParamInfo *)genlib_sysmem_newptr(12 * sizeof(ParamInfo));
-	self->__commonstate.numparams = 12;
-	// initialize parameter 0 ("m_a_GAIN_31")
+	self->__commonstate.params = (ParamInfo *)genlib_sysmem_newptr(13 * sizeof(ParamInfo));
+	self->__commonstate.numparams = 13;
+	// initialize parameter 0 ("m_a_GAIN_41")
 	pi = self->__commonstate.params + 0;
 	pi->name = "a_GAIN";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_a_GAIN_31;
+	pi->defaultvalue = self->m_a_GAIN_41;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -533,11 +624,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 24;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 1 ("m_b_CELLING_32")
+	// initialize parameter 1 ("m_b_CELLING_42")
 	pi = self->__commonstate.params + 1;
 	pi->name = "b_CELLING";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_b_CELLING_32;
+	pi->defaultvalue = self->m_b_CELLING_42;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -547,11 +638,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 0;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 2 ("m_d_ATK_33")
+	// initialize parameter 2 ("m_d_ATK_43")
 	pi = self->__commonstate.params + 2;
 	pi->name = "d_ATK";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_d_ATK_33;
+	pi->defaultvalue = self->m_d_ATK_43;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -561,11 +652,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 750;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 3 ("m_e_REL_30")
+	// initialize parameter 3 ("m_e_REL_40")
 	pi = self->__commonstate.params + 3;
 	pi->name = "e_REL";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_e_REL_30;
+	pi->defaultvalue = self->m_e_REL_40;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -575,11 +666,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 1000;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 4 ("m_g_DITHER_29")
+	// initialize parameter 4 ("m_g_DITHER_39")
 	pi = self->__commonstate.params + 4;
 	pi->name = "g_DITHER";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_g_DITHER_29;
+	pi->defaultvalue = self->m_g_DITHER_39;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -589,11 +680,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 1;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 5 ("m_h_BYPASS_28")
+	// initialize parameter 5 ("m_h_BYPASS_38")
 	pi = self->__commonstate.params + 5;
 	pi->name = "h_BYPASS";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_h_BYPASS_28;
+	pi->defaultvalue = self->m_h_BYPASS_38;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -603,11 +694,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 1;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 6 ("m_i_MAKEUP_27")
+	// initialize parameter 6 ("m_i_MAKEUP_37")
 	pi = self->__commonstate.params + 6;
 	pi->name = "i_MAKEUP";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_i_MAKEUP_27;
+	pi->defaultvalue = self->m_i_MAKEUP_37;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -617,11 +708,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 12;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 7 ("m_j_TRIM_26")
+	// initialize parameter 7 ("m_j_TRIM_36")
 	pi = self->__commonstate.params + 7;
 	pi->name = "j_TRIM";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_j_TRIM_26;
+	pi->defaultvalue = self->m_j_TRIM_36;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -631,11 +722,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 12;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 8 ("m_k_DELTA_25")
+	// initialize parameter 8 ("m_k_DELTA_35")
 	pi = self->__commonstate.params + 8;
 	pi->name = "k_DELTA";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_k_DELTA_25;
+	pi->defaultvalue = self->m_k_DELTA_35;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -645,11 +736,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 1;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 9 ("m_l_DETECT_24")
+	// initialize parameter 9 ("m_l_DETECT_34")
 	pi = self->__commonstate.params + 9;
 	pi->name = "l_DETECT";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_l_DETECT_24;
+	pi->defaultvalue = self->m_l_DETECT_34;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -659,11 +750,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 1;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 10 ("m_m_AUTOREL_23")
+	// initialize parameter 10 ("m_m_AUTOREL_33")
 	pi = self->__commonstate.params + 10;
 	pi->name = "m_AUTOREL";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_m_AUTOREL_23;
+	pi->defaultvalue = self->m_m_AUTOREL_33;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -673,11 +764,11 @@ void *create(t_param sr, long vs) {
 	pi->outputmax = 1;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
-	// initialize parameter 11 ("m_n_LOOKAHEAD_22")
+	// initialize parameter 11 ("m_n_LOOKAHEAD_31")
 	pi = self->__commonstate.params + 11;
 	pi->name = "n_LOOKAHEAD";
 	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
-	pi->defaultvalue = self->m_n_LOOKAHEAD_22;
+	pi->defaultvalue = self->m_n_LOOKAHEAD_31;
 	pi->defaultref = 0;
 	pi->hasinputminmax = false;
 	pi->inputmin = 0;
@@ -685,6 +776,20 @@ void *create(t_param sr, long vs) {
 	pi->hasminmax = true;
 	pi->outputmin = 0;
 	pi->outputmax = 5;
+	pi->exp = 0;
+	pi->units = "";		// no units defined
+	// initialize parameter 12 ("m_o_DCFILT_32")
+	pi = self->__commonstate.params + 12;
+	pi->name = "o_DCFILT";
+	pi->paramtype = GENLIB_PARAMTYPE_FLOAT;
+	pi->defaultvalue = self->m_o_DCFILT_32;
+	pi->defaultref = 0;
+	pi->hasinputminmax = false;
+	pi->inputmin = 0;
+	pi->inputmax = 1;
+	pi->hasminmax = true;
+	pi->outputmin = 0;
+	pi->outputmax = 1;
 	pi->exp = 0;
 	pi->units = "";		// no units defined
 	

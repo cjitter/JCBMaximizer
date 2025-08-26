@@ -67,9 +67,9 @@ JCBMaximizerAudioProcessorEditor::JCBMaximizerAudioProcessorEditor (JCBMaximizer
     // Verificar si el host es Logic Pro
     juce::PluginHostType hostInfo;
     if (hostInfo.isLogic()) {
-        titleText = "v0.9.1 beta";  // Solo versión para Logic Pro
+        titleText = "v1.0.0-alpha.1";  // Solo versión para Logic Pro
     } else {
-        titleText = "JCBMaximizer v0.9.1 beta";  // Nombre completo para otros DAWs
+        titleText = "JCBMaximizer v1.0.0-alpha.1";  // Nombre completo para otros DAWs
     }
     
     titleLink.setButtonText(titleText);
@@ -202,11 +202,14 @@ JCBMaximizerAudioProcessorEditor::JCBMaximizerAudioProcessorEditor (JCBMaximizer
     // Graphics ON = envolventes VISIBLES (mostrar formas de onda en tiempo real)
     // Graphics OFF = envolventes OCULTAS (mejor rendimiento)
     bool graphicsButtonState = initialEnvelopeState;  // Directo, sin inversión
-    transferDisplay.setEnvelopeVisible(initialEnvelopeState);
     utilityButtons.runGraphicsButton.setToggleState(graphicsButtonState, juce::dontSendNotification);
     utilityButtons.runGraphicsButton.setButtonText("graphics");
+    transferDisplay.setEnvelopeVisible(initialEnvelopeState);
     // Configurar visibilidad inicial del grMeter (visible cuando envolventes están visibles)
     grMeter.setVisible(initialEnvelopeState);
+    // Forzar repaint inicial para asegurar consistencia visual
+    transferDisplay.repaint();
+    grMeter.repaint();
     
     // Actualizar valores de sliders desde APVTS para evitar problemas al cargar sesión
     // Usar MessageManager::callAsync para ejecución thread-safe sin delay
@@ -281,6 +284,7 @@ JCBMaximizerAudioProcessorEditor::~JCBMaximizerAudioProcessorEditor()
     
     // Botones con LookAndFeel personalizado
     rightBottomKnobs.ditherButton.setLookAndFeel(nullptr);
+    rightBottomKnobs.dcFilterButton.setLookAndFeel(nullptr);
     rightBottomKnobs.autorelButton.setLookAndFeel(nullptr);
     
     // 4. Limpiar LookAndFeel del editor principal
@@ -414,8 +418,10 @@ void JCBMaximizerAudioProcessorEditor::resized()
     transferDisplay.setBounds(getScaledBounds(x, y, w, h));
     
     // === PARAMETER BUTTONS (ENCIMA DE TRANSFER FUNCTION) ===
-    // Botones DITHER, DELTA y BYPASS en fila horizontal superior central
-    rightBottomKnobs.ditherButton.setBounds(getScaledBounds(625, 70, 40, 15));
+    // Botones DC FILTER y DITHER centrados sobre transfer function
+    // Transfer function centrada en X=387, colocar botones centrados
+    rightBottomKnobs.dcFilterButton.setBounds(getScaledBounds(300, 15, 50, 15));  // DC FILTER centrado
+    rightBottomKnobs.ditherButton.setBounds(getScaledBounds(360, 15, 40, 15));    // DITHER a la derecha
     
     // === LEFT SIDE KNOBS === (Between SC meters and transfer function)
     // Top row - THD, CEILING (MAXIMIZER-specific parameters)
@@ -477,16 +483,16 @@ void JCBMaximizerAudioProcessorEditor::resized()
     // sidechainControls.soloScButton.setBounds(getScaledBounds(centerX - buttonWidth/2, 29, buttonWidth, 12));
     
     // === PRESET AREA (TOP LEFT) ===
-    presetArea.saveButton.setBounds(getScaledBounds(15, 15, 20, 12));  // Alineado con undo
-    presetArea.saveAsButton.setBounds(getScaledBounds(37, 15, 25, 12));
-    presetArea.deleteButton.setBounds(getScaledBounds(64, 15, 25, 12));
-    presetArea.backButton.setBounds(getScaledBounds(91, 15, 18, 12));
-    presetArea.nextButton.setBounds(getScaledBounds(112, 15, 18, 12));
-    presetArea.presetMenu.setBounds(getScaledBounds(133, 15, 65, 12));
+    presetArea.saveButton.setBounds(getScaledBounds(5, 15, 20, 12));  // Desplazado 10px a la izquierda
+    presetArea.saveAsButton.setBounds(getScaledBounds(27, 15, 25, 12));
+    presetArea.deleteButton.setBounds(getScaledBounds(54, 15, 25, 12));
+    presetArea.backButton.setBounds(getScaledBounds(81, 15, 14, 12));  // Reducido de 18 a 14px
+    presetArea.nextButton.setBounds(getScaledBounds(98, 15, 14, 12));  // Reducido de 18 a 14px
+    presetArea.presetMenu.setBounds(getScaledBounds(114, 15, 95, 12));  // Ampliado de 65 a 95px
     
     // Botones A/B junto al menú de preset
-    topButtons.abStateButton.setBounds(getScaledBounds(202, 15, 18, 12));
-    topButtons.abCopyButton.setBounds(getScaledBounds(222, 15, 22, 12));
+    topButtons.abStateButton.setBounds(getScaledBounds(213, 15, 18, 12));
+    topButtons.abCopyButton.setBounds(getScaledBounds(233, 15, 22, 12));
     
     // === BOTONES DE UTILIDAD (INFERIOR IZQUIERDA) ===
     utilityButtons.undoButton.setBounds(getScaledBounds(30, 175, 22, 12));
@@ -723,6 +729,14 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
         bool bypassActive = parameterButtons.bypassButton.getToggleState();
         transferDisplay.setBypassMode(bypassActive);
         
+        // Si salimos de bypass y graphics está activo, restaurar envolventes
+        if (!bypassActive && utilityButtons.runGraphicsButton.getToggleState()) {
+            transferDisplay.setEnvelopeVisible(true);
+            grMeter.setVisible(true);
+            transferDisplay.repaint();
+            grMeter.repaint();
+        }
+        
         // Actualizar output meters para usar gradient de entrada cuando bypass está activo
         outputMeterL.setBypassMode(bypassActive);
         outputMeterR.setBypassMode(bypassActive);
@@ -770,6 +784,9 @@ void JCBMaximizerAudioProcessorEditor::buttonClicked(juce::Button* button)
         processor.setEnvelopeVisualEnabled(newState);  // Directo, sin inversión
         grMeter.setVisible(newState);  // Directo, sin inversión
         // Mantener el texto siempre como "graphics"
+        // Forzar repaint para asegurar actualización visual inmediata
+        transferDisplay.repaint();
+        grMeter.repaint();
         handleParameterChange();  // Marcar preset como modificado
     }
     // Botones de gestión de presets
@@ -1325,6 +1342,24 @@ void JCBMaximizerAudioProcessorEditor::setupKnobs()
     }
     // Tooltip actualizado via getTooltipText("dither") en updateAllTooltips()
     
+    // DC FILTER button - centro superior
+    rightBottomKnobs.dcFilterButton.setComponentID("dcfilter");
+    rightBottomKnobs.dcFilterButton.setLookAndFeel(&smallButtonLAF);
+    rightBottomKnobs.dcFilterButton.setButtonText("DC FILTER");
+    rightBottomKnobs.dcFilterButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    rightBottomKnobs.dcFilterButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xFF46224F));
+    rightBottomKnobs.dcFilterButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    rightBottomKnobs.dcFilterButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    rightBottomKnobs.dcFilterButton.setClickingTogglesState(true);
+    addAndMakeVisible(rightBottomKnobs.dcFilterButton);
+    if (auto* param = processor.apvts.getParameter("o_DCFILT"))
+    {
+        rightBottomKnobs.dcFilterAttachment = std::make_unique<UndoableButtonAttachment>(
+            *param, rightBottomKnobs.dcFilterButton, &undoManager);
+        rightBottomKnobs.dcFilterAttachment->onParameterChange = [this]() { handleParameterChange(); };
+    }
+    // Tooltip actualizado via getTooltipText("dcfilter") en updateAllTooltips()
+    
     // DET knob - área derecha superior  
     rightTopControls.detSlider.setComponentID("detect");
     rightTopControls.detSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -1724,6 +1759,11 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                 bool toggleState = defaultValue >= 0.5f;
                 rightBottomKnobs.ditherButton.setToggleState(toggleState, juce::sendNotificationSync);
             }
+            if (auto* param = processor.apvts.getParameter("o_DCFILT")) {
+                float defaultValue = param->getDefaultValue();
+                bool toggleState = defaultValue >= 0.5f;
+                rightBottomKnobs.dcFilterButton.setToggleState(toggleState, juce::sendNotificationSync);
+            }
             if (auto* param = processor.apvts.getParameter("l_DETECT")) {
                 float defaultValue = param->getDefaultValue();
                 float realValue = param->getNormalisableRange().convertFrom0to1(defaultValue);
@@ -1780,6 +1820,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
             }
         } 
         else if (presetName.startsWith("General_") || 
+                 presetName.startsWith("Drums_") ||
                  presetName.startsWith("Mastering_")) {  // Añadir más categorías cuando se necesiten
             // Es un factory preset - cargar desde BinaryData
             // presetName ya tiene el formato correcto (e.g., "General_Plus6")
@@ -1860,6 +1901,9 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
         juce::String displayName = presetName;
         if (presetName.startsWith("General_")) {
             displayName = "[F] " + presetName.substring(8).replace("_", " ");
+        }
+        else if (presetName.startsWith("Drums_")) {
+            displayName = "[F] " + presetName.substring(6).replace("_", " ");  // "Drums_" tiene 6 caracteres
         }
         // Añadir más categorías cuando se necesiten
         
@@ -2277,11 +2321,10 @@ void JCBMaximizerAudioProcessorEditor::updateMeterStates()
     // scMeterL.setSoloScMode(soloMode);
     // scMeterR.setSoloScMode(soloMode);
     
-    // Ocultar gain reduction meter cuando SOLO SC está activo (no hay compresión activa)
-    // También considerar si graphics está activo para mantener consistencia
-    // NUEVO: También ocultar cuando BYPASS está activo
+    // Simplificar lógica: grMeter visible cuando graphics está ON y no hay bypass ni solo SC
     bool graphicsActive = utilityButtons.runGraphicsButton.getToggleState();
-    grMeter.setVisible(!soloScActive && !graphicsActive && !bypassActive);
+    bool shouldShowGrMeter = graphicsActive && !bypassActive && !soloScActive;
+    grMeter.setVisible(shouldShowGrMeter);
     
     // Actualizar gradiente de salida para modo bypass
     outputMeterL.setBypassMode(bypassActive);
@@ -2670,6 +2713,11 @@ void JCBMaximizerAudioProcessorEditor::refreshPresetMenu()
                 category = "General";
                 presetName = cleanName.substring(8).replace("_", " ");
             }
+            else if (cleanName.startsWith("Drums_"))
+            {
+                category = "Drums";
+                presetName = cleanName.substring(6).replace("_", " ");  // "Drums_" tiene 6 caracteres
+            }
             // Para futuras categorías:
             // else if (cleanName.startsWith("Mastering_"))
             // {
@@ -2683,7 +2731,7 @@ void JCBMaximizerAudioProcessorEditor::refreshPresetMenu()
     }
     
     // Añadir categorías al menú en orden específico
-    juce::StringArray categoryOrder = {"General"};  // Añadir más categorías aquí cuando se necesiten
+    juce::StringArray categoryOrder = {"General", "Drums"};  // Añadida categoría Drums
     
     for (const auto& category : categoryOrder)
     {
@@ -3181,6 +3229,7 @@ void JCBMaximizerAudioProcessorEditor::updateAllTooltips()
     rightBottomKnobs.atkSlider.setTooltip(getTooltipText("attack"));
     rightBottomKnobs.relSlider.setTooltip(getTooltipText("release"));
     rightBottomKnobs.ditherButton.setTooltip(getTooltipText("dither"));    // NUEVO - tooltip para DITHER button
+    rightBottomKnobs.dcFilterButton.setTooltip(getTooltipText("dcfilter")); // NUEVO - tooltip para DC FILTER button
     rightBottomKnobs.autorelButton.setTooltip(getTooltipText("autorel"));  // NUEVO - tooltip para AUTOREL button
     // MAXIMIZER: f_HOLD no existe - comentado según CONTEXTO.txt
     // rightBottomKnobs.holdSlider.setTooltip(getTooltipText("hold"));
@@ -3243,7 +3292,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     if (currentLanguage == TooltipLanguage::Spanish)
     {
         // Spanish tooltips
-        if (key == "title") return JUCE_UTF8("JCBMaximizer: limitador/maximizador de audio v0.9.1\nPlugin de audio open source\nClick para créditos");
+        if (key == "title") return JUCE_UTF8("JCBMaximizer: limitador/maximizador de audio v1.0.0-alpha.1\nPlugin de audio open source\nClick para créditos");
         if (key == "thd") return JUCE_UTF8("GANANCIA: ganancia de entrada al limitador\nControla el nivel de drive antes del procesamiento\nRango: 0 a 24 dB | Por defecto: 0 dB");
         //if (key == "ratio") return JUCE_UTF8("RATIO: cantidad de expansión aplicada\nRelación entrada/salida bajo el threshold\nRango: 1:1 a 40:1 | Por defecto: 4:1");
         //if (key == "knee") return JUCE_UTF8("KNEE: suavidad de la transición en el threshold\nCrea una curva gradual en vez de ángulo duro\nRango: 1 a 20 dB | Por defecto: 1 dB");
@@ -3254,7 +3303,8 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
         if (key == "attack") return JUCE_UTF8("ATTACK: tiempo de ataque del limitador\nControla la respuesta ante aumentos de nivel\nRango: 0.01 a 750 ms | Por defecto: 100 ms");
         if (key == "detect") return JUCE_UTF8("DET: modo de detección del limitador\n0.0 = Peak (rápido) | 1.0 = Sliding RMS (suave)\nValores intermedios mezclan ambos modos\nPor defecto: 1.0 (Sliding RMS)");
         if (key == "ceiling") return JUCE_UTF8("CEILING: nivel máximo de salida\nControla el techo de limitación del maximizer\nRango: -60 a 0 dB | Por defecto: -0.3 dB");
-        if (key == "dither") return JUCE_UTF8("DITHER: añade dither TPDF de 16 bits para reducir artefactos\nReduce distorsión de cuantización en niveles bajos\nRango: 0 a 1 | Por defecto: 0 (OFF)");
+        if (key == "dither") return JUCE_UTF8("DITHER: añade dither TPDF de 16 bits independiente por canal\nReduce distorsión de cuantización en niveles bajos\nRango: 0 a 1 | Por defecto: 0 (OFF)");
+        if (key == "dcfilter") return JUCE_UTF8("DC FILTER: filtro HPF de 1er orden a 12 Hz\nElimina offset DC pre-ceiling\nRango: OFF/ON | Por defecto: OFF");
         if (key == "autorel") return JUCE_UTF8("AUTOREL: liberación automática adaptativa\nActiva release inteligente basado en el material\nRango: OFF/ON | Por defecto: OFF");
         if (key == "release") return JUCE_UTF8("RELEASE: tiempo de liberación del limitador\nControla la velocidad de regreso después de limitar\nRango: 1 a 1000 ms | Por defecto: 200 ms");
         //if (key == "hold") return JUCE_UTF8("HOLD: tiempo de retención antes del release\nMantiene la expansión por un período fijo\nRango: 0 a 500 ms | Por defecto: 0 ms");
@@ -3298,7 +3348,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     else
     {
         // English tooltips
-        if (key == "title") return "JCBMaximizer: audio limiter/maximizer v0.9.1\nOpen source audio plugin\nClick for credits";
+        if (key == "title") return "JCBMaximizer: audio limiter/maximizer v1.0.0-alpha.1\nOpen source audio plugin\nClick for credits";
         if (key == "thd") return "GAIN: limiter input gain\nControls the drive level before processing\nRange: 0 to 24 dB | Default: 0 dB";
         //if (key == "ratio") return "RATIO: amount of expansion applied\nInput/output relationship below threshold\nRange: 1:1 to 40:1 | Default: 4:1";
         //if (key == "knee") return "KNEE: smoothness of the threshold transition\nCreates a gradual curve instead of hard angle\nRange: 1 to 10 dB | Default: 1 dB";
@@ -3309,7 +3359,8 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
         if (key == "attack") return "ATTACK: limiter attack time\nControls response to level increases\nRange: 0.01 to 750 ms | Default: 100 ms";
         if (key == "detect") return "DET: limiter detection mode\n0.0 = Peak (fast) | 1.0 = Sliding RMS (smooth)\nIntermediate values blend both modes\nDefault: 1.0 (Sliding RMS)";
         if (key == "ceiling") return "CEILING: maximum output level\nControls the maximizer's limiting ceiling\nRange: -60 to 0 dB | Default: -0.3 dB";
-        if (key == "dither") return "DITHER: adds 16-bit TPDF dither to reduce artifacts\nReduces quantization distortion at low levels\nRange: 0 to 1 | Default: 0 (OFF)";
+        if (key == "dither") return "DITHER: adds 16-bit TPDF dither independent per channel\nReduces quantization distortion at low levels\nRange: 0 to 1 | Default: 0 (OFF)";
+        if (key == "dcfilter") return "DC FILTER: 1st order HPF at 12 Hz\nRemoves DC offset pre-ceiling\nRange: OFF/ON | Default: OFF";
         if (key == "autorel") return "AUTOREL: adaptive automatic release\nActivates intelligent release based on material\nRange: OFF/ON | Default: OFF";
         if (key == "release") return "RELEASE: limiter release time\nControls return speed after limiting\nRange: 1 to 1000 ms | Default: 200 ms";
         //if (key == "hold") return "HOLD: retention time before release\nMaintains expansion for a fixed period\nRange: 0 to 500 ms | Default: 0 ms";
@@ -3368,6 +3419,7 @@ void JCBMaximizerAudioProcessorEditor::applyAlphaToMainControls(float alpha)
     // MAXIMIZER: o_DRYWET y u_SOFTCLIP no existen - eliminados según CONTEXTO.txt
     rightTopControls.lookaheadSlider.setAlpha(alpha);
     rightBottomKnobs.ditherButton.setAlpha(alpha);  // NUEVO - alpha para DITHER button
+    rightBottomKnobs.dcFilterButton.setAlpha(alpha); // NUEVO - alpha para DC FILTER button
     
     // MAXIMIZER: h_RANGE, g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
     rightTopControls.detSlider.setAlpha(alpha);  // NUEVO - alpha para DET knob
@@ -3669,6 +3721,7 @@ int JCBMaximizerAudioProcessorEditor::getControlParameterIndex(juce::Component& 
     // MAXIMIZER: soloScButton comentado (no existe)
     // else if (&control == &sidechainControls.soloScButton) return -1;  // m_SOLOSC (no automatizable)
     else if (&control == &rightBottomKnobs.ditherButton) return -1;      // g_DITHER (no automatizable)
+    else if (&control == &rightBottomKnobs.dcFilterButton) return -1;    // o_DCFILT (no automatizable)
     else if (&control == &rightBottomKnobs.autorelButton) return -1;    // m_AUTOREL (no automatizable)
     else if (&control == &parameterButtons.deltaButton) return -1;      // k_DELTA (no automatizable)
     else if (&control == &parameterButtons.bypassButton) return -1;     // h_BYPASS (no automatizable)

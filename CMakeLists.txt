@@ -19,7 +19,7 @@
 
 cmake_minimum_required(VERSION 3.20)
 
-project(JCBMaximizer VERSION 0.9.1)
+project(JCBMaximizer VERSION 1.0.0)
 
 # Configuración C++
 set(CMAKE_CXX_STANDARD 20)
@@ -69,7 +69,7 @@ juce_add_plugin(JCBMaximizer
         # Información básica del plugin
         PLUGIN_NAME "JCBMaximizer"
         PRODUCT_NAME "JCBMaximizer"
-        VERSION 0.9.1
+        VERSION 1.0.0
         DESCRIPTION "Stereo-linked maximizer with lookahead"
 
         # Información de la empresa
@@ -131,6 +131,8 @@ juce_add_binary_data(JCBMaximizer_BinaryData
         Assets/code/Output.txt
         # Presets de fábrica
         Assets/FactoryPresets/General_Plus6.preset
+        # Presets José Peña
+        Assets/FactoryPresets/Drums_Sn_Attack.preset
 )
 
 # Linkear binary data al plugin
