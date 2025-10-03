@@ -16,6 +16,7 @@
 
 // Librerías estándar C++
 #include <mutex>
+#include <cmath>
 #include <vector>
 #include <unordered_map>
 #include <atomic>
@@ -139,12 +140,10 @@ public:
     float getRmsInputValue(const int channel) const noexcept;
     float getRmsOutputValue(const int channel) const noexcept;
     float getGainReductionValue(const int channel) const noexcept;
-    // MAXIMIZER: No sidechain - removed getSCValue
     
     // Detección de clipping
     bool getInputClipDetected(const int channel) const noexcept;
     bool getOutputClipDetected(const int channel) const noexcept;
-    // MAXIMIZER: No sidechain - removed getSidechainClipDetected
     void resetClipIndicators();
     
     // Reducción de ganancia para hosts/DAWs
@@ -190,6 +189,36 @@ private:
     void fillGenInputBuffers(const juce::AudioBuffer<float>& buffer);
     void processGenAudio(int numSamples);
     void fillOutputBuffers(juce::AudioBuffer<float>& buffer);
+
+    // Safety: sanitize audio to avoid NaN/Inf bursts and signal trips
+    inline void sanitizeStereo (float* left, float* right, int numSamples, std::atomic<bool>& tripped) noexcept
+    {
+        bool localTrip = false;
+        for (int i = 0; i < numSamples; ++i)
+        {
+            float sampleL = left[i];
+            float sampleR = right ? right[i] : sampleL;
+
+            if (!std::isfinite(sampleL) || sampleL > 8.0f || sampleL < -8.0f)
+            {
+                sampleL = 0.0f;
+                localTrip = true;
+            }
+            if (!std::isfinite(sampleR) || sampleR > 8.0f || sampleR < -8.0f)
+            {
+                sampleR = 0.0f;
+                localTrip = true;
+            }
+
+            left[i] = sampleL;
+            if (right)
+                right[i] = sampleR;
+        }
+
+        if (localTrip)
+            tripped.store(true, std::memory_order_release);
+    }
+
     
     // Actualizaciones de medidores
     void updateInputMeters(const juce::AudioBuffer<float>& buffer);
@@ -222,7 +251,6 @@ private:
     
     // Promedio móvil para gain reduction (replica average~ 4800 1 de Max)
     MovingAverage4800 grMovingAverage;
-    // MAXIMIZER: No sidechain - removed leftSC, rightSC, sidechainBuffer
     
     // Buffers auxiliares
     juce::AudioBuffer<float> grBuffer;
@@ -250,7 +278,7 @@ private:
     // Estado de detección de clipping
     std::atomic<bool> inputClipDetected[2] = {false, false};
     std::atomic<bool> outputClipDetected[2] = {false, false};
-    // MAXIMIZER: No sidechain - removed sidechainClipDetected
+    std::atomic<bool> nanTripped{ false };
     
     // Valor de reducción de ganancia para hosts
     mutable std::atomic<float> currentGainReductionDb{0.0f};

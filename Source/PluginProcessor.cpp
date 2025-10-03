@@ -13,6 +13,7 @@
 #include "PluginEditor.h"
 #include "Helpers/UTF8Helper.h"
 
+
 //==============================================================================
 // CONSTRUCTOR Y DESTRUCTOR
 //==============================================================================
@@ -95,7 +96,7 @@ JCBMaximizerAudioProcessor::~JCBMaximizerAudioProcessor()
 {
     // CRÍTICO: Primero indicar que estamos destruyendo para evitar race conditions
     isBeingDestroyed = true;
-    
+
     // Detener timer AAX inmediatamente (antes que cualquier otra cosa)
     #if JucePlugin_Build_AAX
     stopTimer();
@@ -251,7 +252,6 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // Esto asegura que el slider comience desde un estado limpio
     grMovingAverage.reset();
     
-    // MAXIMIZER: No sidechain - removed leftSC/rightSC initialization
     // leftSC.store(-100.0f, std::memory_order_relaxed);
     // rightSC.store(-100.0f, std::memory_order_relaxed);
     
@@ -262,9 +262,6 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     trimInputBuffer.setSize(2, samplesPerBlock);
     trimInputBuffer.clear();
     
-    // MAXIMIZER: No sidechain - removed sidechainBuffer initialization
-    // sidechainBuffer.setSize(getTotalNumInputChannels(), samplesPerBlock);
-    // sidechainBuffer.clear();
     
     // Inicializar buffers de forma de onda
     currentInputSamples.resize(samplesPerBlock, 0.0f);
@@ -276,8 +273,6 @@ void JCBMaximizerAudioProcessor::releaseResources()
     // Limpiar buffers auxiliares
     grBuffer.setSize(0, 0);
     trimInputBuffer.setSize(0, 0);
-    // MAXIMIZER: No sidechain - removed sidechainBuffer cleanup
-    // sidechainBuffer.setSize(0, 0);
 }
 
 //==============================================================================
@@ -545,6 +540,28 @@ void JCBMaximizerAudioProcessor::processBlockCommon(juce::AudioBuffer<float>& bu
         }
     }
     
+    // Safety: sanitize final output and recover Gen state if needed
+#if !defined(JCB_DISABLE_SANITIZER)
+    sanitizeStereo(wetL, (numChannels > 1 ? wetR : nullptr), numSamples, nanTripped);
+#endif
+
+    if (nanTripped.exchange(false, std::memory_order_acq_rel))
+    {
+        if (m_PluginState != nullptr)
+        {
+            JCBMaximizer::reset(m_PluginState);
+
+            for (int i = 0; i < JCBMaximizer::num_params(); ++i)
+            {
+                const char* raw = JCBMaximizer::getparametername(m_PluginState, i);
+                const juce::String paramId(raw ? raw : "");
+
+                if (auto* param = apvts.getRawParameterValue(paramId))
+                    JCBMaximizer::setparameter(m_PluginState, i, param->load(), nullptr);
+            }
+        }
+    }
+
     // === Meters y capturas (como al final de tu processBlock) ===
     captureInputWaveformData(buffer, numSamples);
     captureOutputWaveformData(numSamples);
@@ -590,7 +607,6 @@ void JCBMaximizerAudioProcessor::fillGenInputBuffers(const juce::AudioBuffer<flo
     const auto mainInputChannels = getMainBusNumInputChannels();
     const int numSamples = buffer.getNumSamples();
     
-    // MAXIMIZER: Only 2 inputs (main L/R) - no sidechain inputs
     if (mainInputChannels > 1) {
         // Modo estéreo - fill main L/R inputs (inputs 0 and 1)
         for (int j = 0; j < numSamples; j++) {
@@ -777,120 +793,18 @@ void JCBMaximizerAudioProcessor::updateGainReductionMeter()
     #endif
 }
 
-// MAXIMIZER: No sidechain - removed entire updateSidechainMeters function
-/*
-void JCBMaximizerAudioProcessor::updateSidechainMeters(const juce::AudioBuffer<float>& buffer)
-{
-    const int numSamples = buffer.getNumSamples();
 
-    // Resetear flags de clipping sidechain para este buffer
-    bool scClip[2] = {false, false};
-    
-    // MAXIMIZER: No tiene sidechain externo, siempre usar silencio en medidores SC
-    const bool extKeyActive = false;  // Maximizer no tiene external key
-    
-    // Si EXT KEY no está activo, mostrar silencio en los medidores
-    if (!extKeyActive) {
-        const auto valueSC = -100.0f;
-        
-        // MAXIMIZER: No sidechain - leftSC/rightSC variables eliminadas según CONTEXTO.txt
-        // leftSC.store(valueSC, std::memory_order_relaxed);
-        // rightSC.store(valueSC, std::memory_order_relaxed);
-        
-        return;  // No procesar más si EXT KEY está desactivado
-    }
-    
-    // CAMBIO: Usar las salidas 5 y 6 de Gen~ (índices 5 y 6 en m_OutputBuffers)
-    // Estas salidas ya incluyen el procesamiento de SC TRIM aplicado por Gen~
-    if (JCBMaximizer::num_outputs() > 6) {
-        // Calcular RMS y pico del sidechain desde las salidas de Gen~
-        float maxSCL = 0.0f, maxSCR = 0.0f;
-        float rmsSumL = 0.0f, rmsSumR = 0.0f;
-        
-        for (int i = 0; i < numSamples; ++i) {
-            // Usar salidas 5 y 6 de Gen~ que ya tienen SC TRIM aplicado
-            float sampleL = static_cast<float>(m_OutputBuffers[5][i]);
-            float sampleR = static_cast<float>(m_OutputBuffers[6][i]);
-            
-            // Peak detection
-            maxSCL = juce::jmax(maxSCL, std::abs(sampleL));
-            maxSCR = juce::jmax(maxSCR, std::abs(sampleR));
-            
-            // RMS accumulation
-            rmsSumL += sampleL * sampleL;
-            rmsSumR += sampleR * sampleR;
-        }
-        
-        // Calcular RMS
-        float rmsL = std::sqrt(rmsSumL / static_cast<float>(numSamples));
-        float rmsR = std::sqrt(rmsSumR / static_cast<float>(numSamples));
-        
-        const auto rmsValueSCLeft = juce::Decibels::gainToDecibels(rmsL);
-        const auto rmsValueSCRight = juce::Decibels::gainToDecibels(rmsR);
-        const auto peakValueSCLeft = juce::Decibels::gainToDecibels(maxSCL);
-        const auto peakValueSCRight = juce::Decibels::gainToDecibels(maxSCR);
-        
-        // Detectar clipping basado en el valor de pico
-        if (maxSCL >= 0.999f) {  // Usar el mismo umbral que los medidores principales
-            scClip[0] = true;
-        }
-        if (maxSCR >= 0.999f) {
-            scClip[1] = true;
-        }
-        
-        // Usar combinación ponderada como en los medidores principales
-        const auto displayValueSCLeft = (peakValueSCLeft * 0.7f) + (rmsValueSCLeft * 0.3f);
-        const auto displayValueSCRight = (peakValueSCRight * 0.7f) + (rmsValueSCRight * 0.3f);
-        
-        const auto valueSCLeft = (peakValueSCLeft > -3.0f) ? peakValueSCLeft : displayValueSCLeft;
-        const auto valueSCRight = (peakValueSCRight > -3.0f) ? peakValueSCRight : displayValueSCRight;
-        
-        // MAXIMIZER: No sidechain - leftSC/rightSC variables eliminadas según CONTEXTO.txt
-        // if (!isProTools()) {
-        //     leftSC.store(valueSCLeft, std::memory_order_relaxed);
-        //     rightSC.store(valueSCRight, std::memory_order_relaxed);
-        // } else {
-        //     // ProTools: usar solo canal izquierdo para ambos medidores
-        //     leftSC.store(valueSCLeft, std::memory_order_relaxed);
-        //     leftSC.store(valueSCLeft, std::memory_order_relaxed);
-        // }
-    } else {
-        // Sidechain no disponible - mostrar silencio
-        const auto valueSC = -100.0f;
-        
-        // MAXIMIZER: No sidechain - leftSC/rightSC variables eliminadas según CONTEXTO.txt
-        // leftSC.store(valueSC, std::memory_order_relaxed);
-        // rightSC.store(valueSC, std::memory_order_relaxed);
-    }
-    
-    // Actualizar flags atómicos de clip
-    for (int channel = 0; channel < 2; ++channel) {
-        if (scClip[channel]) {
-            sidechainClipDetected[channel] = true;
-        }
-    }
-}
-*/
 
 //==============================================================================
 // CONFIGURACIÓN DE BUSES Y PARÁMETROS
 //==============================================================================
 juce::AudioProcessor::BusesProperties JCBMaximizerAudioProcessor::createBusesProperties()
 {
-    // MAXIMIZER: Simple stereo I/O - no sidechain buses
     auto propBuses = juce::AudioProcessor::BusesProperties()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
         .withInput("Input", juce::AudioChannelSet::stereo(), true);
     
-    // MAXIMIZER: No sidechain - removed sidechain bus configuration
-    /*
-    juce::PluginHostType daw;
     
-    if (daw.isProTools())
-        propBuses.addBus(true, "Sidechain MONO", juce::AudioChannelSet::mono(), false);
-    else
-        propBuses.addBus(true, "Sidechain ST", juce::AudioChannelSet::stereo(), false);
-    */
     
     return propBuses;
 }
@@ -922,27 +836,7 @@ bool JCBMaximizerAudioProcessor::isBusesLayoutSupported(const juce::AudioProcess
         return false;
 #endif
     
-    // MAXIMIZER: No sidechain - removed sidechain bus validation
-    /*
-    // Si hay bus de sidechain, verificar que sea válido
-    if (layouts.inputBuses.size() > 1)
-    {
-        auto sidechainBus = layouts.inputBuses[1];
-        
-        // El sidechain puede estar desactivado (empty)
-        if (!sidechainBus.isDisabled())
-        {
-            // Solo aceptar sidechain mono o estéreo si está activo
-            if (sidechainBus != juce::AudioChannelSet::mono() 
-                && sidechainBus != juce::AudioChannelSet::stereo())
-                return false;
-        }
-            
-        // No aceptar más de 2 buses de entrada
-        if (layouts.inputBuses.size() > 2)
-            return false;
-    }
-    */
+    
     
     return true;
 #endif
@@ -1180,7 +1074,6 @@ void JCBMaximizerAudioProcessor::handleAsyncUpdate()
 void JCBMaximizerAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
     
-    // Validar valores mínimos para ATK y REL (MAXIMIZER: rangos ajustados)
     if (parameterID == "d_ATK" && newValue < 0.01f) {
         newValue = 0.01f;  // Maximizer permite hasta 0.01ms
     }
@@ -1289,7 +1182,6 @@ float JCBMaximizerAudioProcessor::getGainReductionValue(const int channel) const
     return 0.0f;
 }
 
-// MAXIMIZER: No sidechain - removed getSCValue function
 /*
 float JCBMaximizerAudioProcessor::getSCValue(const int channel) const noexcept
 {
@@ -1454,7 +1346,6 @@ void JCBMaximizerAudioProcessor::getStateInformation(juce::MemoryBlock& destData
         if (param.isValid())
             param.setProperty("value", 0.0f, nullptr);
         
-        // MAXIMIZER: Solo resetear BYPASS y DELTA (no tiene SOLOSC)    
         param = paramsNode.getChildWithProperty("id", "k_DELTA");
         if (param.isValid())
             param.setProperty("value", 0.0f, nullptr);
@@ -1503,7 +1394,6 @@ void JCBMaximizerAudioProcessor::setStateInformation(const void* data, int sizeI
         // Forzar parámetros momentáneos a OFF después de cargar (MAXIMIZER)
         apvts.getParameter("h_BYPASS")->setValueNotifyingHost(0.0f);
         apvts.getParameter("k_DELTA")->setValueNotifyingHost(0.0f);
-        // MAXIMIZER: No tiene m_SOLOSC
         
         // Clear undo history AFTER all values have been set
         // This prevents any parameter changes from being recorded in undo history
@@ -1822,25 +1712,13 @@ bool JCBMaximizerAudioProcessor::getOutputClipDetected(const int channel) const 
     return false;
 }
 
-// MAXIMIZER: No sidechain - removed getSidechainClipDetected function
-/*
-bool JCBMaximizerAudioProcessor::getSidechainClipDetected(const int channel) const noexcept
-{
-    jassert(channel == 0 || channel == 1);
-    if (channel >= 0 && channel < 2) {
-        return sidechainClipDetected[channel].load();
-    }
-    return false;
-}
-*/
+
 
 void JCBMaximizerAudioProcessor::resetClipIndicators()
 {
     for (int channel = 0; channel < 2; ++channel) {
         inputClipDetected[channel] = false;
         outputClipDetected[channel] = false;
-        // MAXIMIZER: No sidechain - removed sidechainClipDetected reset
-        // sidechainClipDetected[channel] = false;
     }
 }
 

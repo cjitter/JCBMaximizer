@@ -17,6 +17,21 @@
 // CONSTRUCTOR
 //==============================================================================
 
+juce::Range<float> TransferFunctionDisplay::getDbRange() const noexcept
+{
+    if (currentZoom == ZoomLevel::Normal)
+        return { normalMinDb, normalMaxDb };
+
+    const float clampedCeiling = juce::jlimit(normalMinDb, normalMaxDb, ceiling);
+    float maxDb = juce::jmin(normalMaxDb, clampedCeiling + zoomTopMarginDb);
+    float minDb = juce::jmax(normalMinDb, maxDb - zoomSpanDb);
+
+    if (maxDb - minDb < 6.0f)
+        minDb = maxDb - 6.0f;
+
+    return { minDb, maxDb };
+}
+
 TransferFunctionDisplay::TransferFunctionDisplay()
 {
     setOpaque(false);  // Fondo translúcido para mejor integración visual
@@ -114,7 +129,6 @@ void TransferFunctionDisplay::setKnee(float kneeDb)
     }
 }
 
-// MAXIMIZER: setRatio() y setRange() eliminados - no existen según CONTEXTO.txt
 
 void TransferFunctionDisplay::updateCurve()
 {
@@ -193,48 +207,64 @@ void TransferFunctionDisplay::setLogicStoppedState(bool stopped)
 void TransferFunctionDisplay::drawGrid(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     g.setColour(DarkTheme::textSecondary.withAlpha(0.1f));
     
     // Ajustar las líneas de la grilla según el zoom
     std::vector<float> dbValues;
     std::vector<float> secondaryDbValues;
-    
-    switch (currentZoom)
+
+    if (currentZoom == ZoomLevel::Normal)
     {
-        case ZoomLevel::Normal:
-            dbValues = { 0.0f, -10.0f, -20.0f, -30.0f, -40.0f, -50.0f, -60.0f, -80.0f, -100.0f };
-            secondaryDbValues = { -5.0f, -15.0f, -25.0f, -35.0f, -45.0f, -55.0f, -70.0f, -90.0f };
-            break;
-        case ZoomLevel::Zoomed:
-            dbValues = { 0.0f, -6.0f, -12.0f, -18.0f, -24.0f, -30.0f, -36.0f, -42.0f, -50.0f };
-            secondaryDbValues = { -3.0f, -9.0f, -15.0f, -21.0f, -27.0f, -33.0f, -39.0f, -47.0f };
-            break;
+        constexpr float majorTicks[] { 0.0f, -10.0f, -20.0f, -30.0f, -40.0f, -50.0f, -60.0f, -80.0f, -100.0f };
+        constexpr float minorTicks[] { -5.0f, -15.0f, -25.0f, -35.0f, -45.0f, -55.0f, -70.0f, -90.0f };
+
+        for (float value : majorTicks)
+            if (value >= minDb && value <= maxDb)
+                dbValues.push_back(value);
+
+        for (float value : minorTicks)
+            if (value >= minDb && value <= maxDb)
+                secondaryDbValues.push_back(value);
     }
-    
+    else
+    {
+        const auto addTicks = [minDb, maxDb](float step, std::vector<float>& target)
+        {
+            if (step <= 0.0f)
+                return;
+
+            float startTick = std::ceil(minDb / step) * step;
+            if (startTick > maxDb)
+                startTick = maxDb;
+
+            for (float value = startTick; value <= maxDb + 0.001f; value += step)
+            {
+                if (value >= minDb)
+                    target.push_back(value);
+            }
+        };
+
+        addTicks(3.0f, dbValues);
+        addTicks(1.5f, secondaryDbValues);
+    }
+
     // Grid vertical (Input dB)
     for (float db : dbValues)
     {
-        float x = juce::jmap(db, minDb, maxDb, bounds.getX(), bounds.getRight());
+        const float clampedDb = juce::jlimit(minDb, maxDb, db);
+        float x = juce::jmap(clampedDb, minDb, maxDb, bounds.getX(), bounds.getRight());
         g.drawVerticalLine(int(x), bounds.getY(), bounds.getBottom());
     }
     
     // Grid horizontal (Output dB - coordenadas invertidas)
     for (float db : dbValues)
     {
-        float y = juce::jmap(db, minDb, maxDb, bounds.getBottom(), bounds.getY());
+        const float clampedDb = juce::jlimit(minDb, maxDb, db);
+        float y = juce::jmap(clampedDb, minDb, maxDb, bounds.getBottom(), bounds.getY());
         g.drawHorizontalLine(int(y), bounds.getX(), bounds.getRight());
     }
     
@@ -243,10 +273,11 @@ void TransferFunctionDisplay::drawGrid(juce::Graphics& g, juce::Rectangle<float>
     
     for (float db : secondaryDbValues)
     {
-        float x = juce::jmap(db, minDb, maxDb, bounds.getX(), bounds.getRight());
+        const float clampedDb = juce::jlimit(minDb, maxDb, db);
+        float x = juce::jmap(clampedDb, minDb, maxDb, bounds.getX(), bounds.getRight());
         g.drawVerticalLine(int(x), bounds.getY(), bounds.getBottom());
         
-        float y = juce::jmap(db, minDb, maxDb, bounds.getBottom(), bounds.getY());
+        float y = juce::jmap(clampedDb, minDb, maxDb, bounds.getBottom(), bounds.getY());
         g.drawHorizontalLine(int(y), bounds.getX(), bounds.getRight());
     }
 }
@@ -278,18 +309,9 @@ void TransferFunctionDisplay::drawThresholdProjection(juce::Graphics& g, juce::R
 {
     // NUEVA LÓGICA: Ahora dibujamos la proyección del CEILING (que es el punto de limitación)
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     // Solo dibujar si el ceiling está dentro del rango visible
     if (ceiling < minDb || ceiling > maxDb) return;
@@ -321,7 +343,6 @@ void TransferFunctionDisplay::drawThresholdProjection(juce::Graphics& g, juce::R
 
 void TransferFunctionDisplay::drawRangeProjection(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
-    // MAXIMIZER: drawRangeProjection eliminada - parámetro RANGE no existe según CONTEXTO.txt
     // Los limitadores no usan proyección de range, solo threshold y ceiling
 }
 
@@ -330,39 +351,26 @@ void TransferFunctionDisplay::drawKneeArea(juce::Graphics& g, juce::Rectangle<fl
     if (knee <= 0.0f) return; // No dibujar si knee es 0 (hard knee)
     
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
-    // NUEVA LÓGICA: Usar CEILING como punto de limitación
+    // Calcular los puntos de inicio y fin del knee usando el ceiling
+    const float rawKneeStart = ceiling - knee;
+    const float rawKneeEnd = ceiling + knee;
+    const float kneeStart = juce::jlimit(minDb, maxDb, rawKneeStart);
+    const float kneeEnd = juce::jlimit(minDb, maxDb, rawKneeEnd);
+    
+    // Solo dibujar la parte visible del knee
+    if (kneeStart >= maxDb || kneeEnd <= minDb) return; // Knee completamente fuera del rango visible
     
     // Dibujar el área de transición suave del knee - como una sombra muy sutil
     g.setColour(DarkTheme::textSecondary.withAlpha(0.03f));
     
-    // Calcular los puntos de inicio y fin del knee usando el ceiling
-    float kneeStart = ceiling - knee;
-    float kneeEnd = ceiling + knee;
+    // Convertir a coordenadas de píxel usando valores recortados
+    float kneeStartX = juce::jmap(kneeStart, minDb, maxDb, bounds.getX(), bounds.getRight());
+    float kneeEndX = juce::jmap(kneeEnd, minDb, maxDb, bounds.getX(), bounds.getRight());
     
-    // Solo dibujar la parte visible del knee
-    kneeStart = juce::jmax(kneeStart, minDb);
-    kneeEnd = juce::jmin(kneeEnd, maxDb);
-    
-    if (kneeStart >= maxDb || kneeEnd <= minDb) return; // Knee completamente fuera del rango visible
-    
-    // Convertir a coordenadas de píxel usando ceiling
-    float kneeStartX = juce::jmap(ceiling - knee, minDb, maxDb, bounds.getX(), bounds.getRight());
-    float kneeEndX = juce::jmap(ceiling + knee, minDb, maxDb, bounds.getX(), bounds.getRight());
-    
-    // Dibujar área sombreada vertical para indicar la zona de transición
     juce::Rectangle<float> kneeRect(kneeStartX, bounds.getY(), kneeEndX - kneeStartX, bounds.getHeight());
     g.fillRect(kneeRect);
     
@@ -370,21 +378,23 @@ void TransferFunctionDisplay::drawKneeArea(juce::Graphics& g, juce::Rectangle<fl
     g.setColour(DarkTheme::textSecondary.withAlpha(0.05f));
     
     // Línea inicio del knee (solo si está visible)
-    if (ceiling - knee > minDb)
+    if (rawKneeStart > minDb)
     {
         juce::Path startDash;
+        const float dashX = juce::jmap(juce::jlimit(minDb, maxDb, rawKneeStart), minDb, maxDb, bounds.getX(), bounds.getRight());
         for (float y = bounds.getY(); y < bounds.getBottom(); y += 4.0f) {
-            startDash.addRectangle(kneeStartX - 0.5f, y, 1.0f, 2.0f);
+            startDash.addRectangle(dashX - 0.5f, y, 1.0f, 2.0f);
         }
         g.fillPath(startDash);
     }
     
     // Línea fin del knee (solo si está visible)
-    if (ceiling + knee < maxDb)
+    if (rawKneeEnd < maxDb)
     {
         juce::Path endDash;
+        const float dashX = juce::jmap(juce::jlimit(minDb, maxDb, rawKneeEnd), minDb, maxDb, bounds.getX(), bounds.getRight());
         for (float y = bounds.getY(); y < bounds.getBottom(); y += 4.0f) {
-            endDash.addRectangle(kneeEndX - 0.5f, y, 1.0f, 2.0f);
+            endDash.addRectangle(dashX - 0.5f, y, 1.0f, 2.0f);
         }
         g.fillPath(endDash);
     }
@@ -393,18 +403,9 @@ void TransferFunctionDisplay::drawKneeArea(juce::Graphics& g, juce::Rectangle<fl
 void TransferFunctionDisplay::drawTransferCurve(juce::Graphics& g, juce::Rectangle<float> bounds)
 {
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     juce::Path curvePath;
     bool firstPoint = true;
@@ -496,7 +497,6 @@ void TransferFunctionDisplay::drawTransferCurve(juce::Graphics& g, juce::Rectang
 
 float TransferFunctionDisplay::calculateKneeOutput(float inputDb, float threshold, float knee, float ceiling)
 {
-    // MAXIMIZER: Función auxiliar para calcular output de limitador en la zona del knee
     // NUEVA LÓGICA: THD actúa como gain/drive y CEILING controla la limitación
     
     // Aplicar THD como gain primero
@@ -666,18 +666,9 @@ float TransferFunctionDisplay::calculateOutput(float inputDb)
 juce::Point<float> TransferFunctionDisplay::dbToPixel(float inputDb, float outputDb, juce::Rectangle<float> bounds)
 {
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     // X: Input va de izquierda (minDb) a derecha (maxDb)
     float x = juce::jmap(inputDb, minDb, maxDb, bounds.getX(), bounds.getRight());
@@ -691,18 +682,9 @@ juce::Point<float> TransferFunctionDisplay::dbToPixel(float inputDb, float outpu
 juce::Point<float> TransferFunctionDisplay::pixelToDb(juce::Point<float> pixel, juce::Rectangle<float> bounds)
 {
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     // Convertir coordenadas de píxel a dB
     float inputDb = juce::jmap(pixel.x, bounds.getX(), bounds.getRight(), minDb, maxDb);
@@ -857,7 +839,6 @@ void TransferFunctionDisplay::updateWaveformData(const float* inputSamples, cons
         // Calcular y almacenar la reducción de ganancia (positivo = reducción)
         float gainReduction = inputDb - processedDb;
         
-        // MAXIMIZER: Para limitadores, la reducción de ganancia se calcula correctamente 
         // No hay condiciones especiales de ratio como en expanders
         
         // Verificar si la señal está por debajo del threshold (considerando knee)
@@ -870,7 +851,6 @@ void TransferFunctionDisplay::updateWaveformData(const float* inputSamples, cons
             processedWaveformBuffer[writeIndex] = inputDb;
         }
         
-        // Verificar si EXT KEY está activo pero no hay señal en sidechain
         // En este caso, no debería haber compresión visible
         if (extKeyActive && sidechainLevel < -60.0f)
         {
@@ -1034,18 +1014,9 @@ void TransferFunctionDisplay::drawWaveformAreas(juce::Graphics& g, juce::Rectang
     // bounds = bounds.expanded(60.0f, 10.0f);  // COMENTADO - causaba el bloque azul
     
     // Determinar el rango de dB según el nivel de zoom (una sola vez, fuera del loop)
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     // Crear paths para áreas rellenas
     juce::Path inputAreaPath;
@@ -1068,9 +1039,11 @@ void TransferFunctionDisplay::drawWaveformAreas(juce::Graphics& g, juce::Rectang
         float inputDb = inputWaveformBuffer[bufferIndex];
         float processedDb = processedWaveformBuffer[bufferIndex];
         
-        // Si los valores son muy bajos (silencio), clampear al mínimo del rango visible
+        // Limitar valores al rango visible actual
         if (inputDb < minDb) inputDb = minDb;
+        if (inputDb > maxDb) inputDb = maxDb;
         if (processedDb < minDb) processedDb = minDb;
+        if (processedDb > maxDb) processedDb = maxDb;
         
         // Calcular posición X - usar todo el ancho disponible
         float normalizedTime = float(i) / float(displayPoints - 1);
@@ -1082,7 +1055,6 @@ void TransferFunctionDisplay::drawWaveformAreas(juce::Graphics& g, juce::Rectang
         float inputY = juce::jmap(inputDb, minDb, maxDb, bounds.getBottom(), bounds.getY() + topOffset);
         float processedY = juce::jmap(processedDb, minDb, maxDb, bounds.getBottom(), bounds.getY() + topOffset);
         
-        // MAXIMIZER: Para limitadores, mostrar la diferencia sin amplificación especial
         // (los limitadores generalmente tienen diferencias más visibles que los expanders)
         
         // Sin fade en los extremos - usar todo el ancho disponible
@@ -1226,7 +1198,6 @@ void TransferFunctionDisplay::mouseDown(const juce::MouseEvent& e)
         case DragMode::Knee:
             dragStartValue = knee;
             break;
-        // MAXIMIZER: DragMode::Ratio y DragMode::Range eliminados - no existen según CONTEXTO.txt
         default:
             break;
     }
@@ -1257,7 +1228,6 @@ void TransferFunctionDisplay::mouseDrag(const juce::MouseEvent& e)
             if (onKneeChange) onKneeChange(newKnee);
             break;
         }
-        // MAXIMIZER: DragMode::Ratio y DragMode::Range eliminados - no existen según CONTEXTO.txt
         default:
             break;
     }
@@ -1281,12 +1251,10 @@ TransferFunctionDisplay::DragMode TransferFunctionDisplay::detectDragMode(juce::
         setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
         return DragMode::Threshold;
     }
-    // MAXIMIZER: isNearRangeLine eliminado - no existe parámetro RANGE según CONTEXTO.txt
     if (isNearKneeArea(mousePos, bounds)) {
         setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
         return DragMode::Knee;
     }
-    // MAXIMIZER: isNearTransferCurve/Ratio eliminado - limitadores no usan drag de ratio según CONTEXTO.txt
     
     setMouseCursor(juce::MouseCursor::NormalCursor);
     return DragMode::None;
@@ -1296,18 +1264,9 @@ bool TransferFunctionDisplay::isNearThresholdLine(juce::Point<float> mousePos, j
 {
     // NUEVA LÓGICA: Detectar proximidad a la línea del CEILING (que es el punto de limitación)
     // Determinar el rango de dB según el nivel de zoom
-    float minDb, maxDb;
-    switch (currentZoom)
-    {
-        case ZoomLevel::Normal:
-            minDb = -60.0f;
-            maxDb = 0.0f;
-            break;
-        case ZoomLevel::Zoomed:
-            minDb = -30.0f;
-            maxDb = 0.0f;
-            break;
-    }
+    auto range = getDbRange();
+    const float minDb = range.getStart();
+    const float maxDb = range.getEnd();
     
     // Solo verificar si el ceiling está dentro del rango visible
     if (ceiling < minDb || ceiling > maxDb) return false;
@@ -1318,7 +1277,6 @@ bool TransferFunctionDisplay::isNearThresholdLine(juce::Point<float> mousePos, j
 
 bool TransferFunctionDisplay::isNearRangeLine(juce::Point<float> /*mousePos*/, juce::Rectangle<float> /*bounds*/)
 {
-    // MAXIMIZER: isNearRangeLine eliminada - parámetro RANGE no existe según CONTEXTO.txt
     return false;
 }
 

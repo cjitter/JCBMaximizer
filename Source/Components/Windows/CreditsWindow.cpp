@@ -313,7 +313,7 @@ void CreditsWindow::buildFullCreditsTextSpanish()
     links.clear();
     
     // Generar texto formateado con saltos de línea para llenar el diálogo
-    fullText = "\nJCBMaximizer v1.0.0-alpha.1";
+    fullText = "\nJCBMaximizer v1.0.0-alpha.2";
     if (pluginFormat.isNotEmpty())
         fullText += " (" + pluginFormat + ")";
     fullText += "\n";
@@ -362,7 +362,7 @@ void CreditsWindow::buildFullCreditsTextEnglish()
     links.clear();
 
     // Generar texto formateado con saltos de línea para llenar el diálogo
-    fullText = "\nJCBMaximizer v1.0.0-alpha.1";
+    fullText = "\nJCBMaximizer v1.0.0-alpha.2";
     if (pluginFormat.isNotEmpty())
         fullText += " (" + pluginFormat + ")";
     fullText += "\n";

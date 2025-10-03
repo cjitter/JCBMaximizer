@@ -116,7 +116,6 @@ public:
             // OUTPUT STAGE (Azul) - #6495ED
             else if (name == "drywet" || id == "drywet" || name == "lookahead" || id == "lookahead" ||
                      name == "trim" || id == "trim" || name == "makeup" || id == "makeup") {
-                     // MAXIMIZER: Removed sctrim references
                 accentColour = juce::Colour(0xFF6495ED);
             }
             
@@ -240,7 +239,6 @@ public:
         
         /**
          * Determina si un slider debe ser pequeño basado en su nombre
-         * Sliders pequeños: solo trim (MAXIMIZER: removed sctrim)
          * Todos los demás (lookahead, hpf, lpf, etc.) son grandes
          */
         bool isSmallSlider(const juce::Slider& slider) const
@@ -249,7 +247,6 @@ public:
             juce::String id = slider.getComponentID().toLowerCase();
             
             return (name == "trim" || id == "trim");
-            // MAXIMIZER: Removed sctrim references
         }
         
         /**

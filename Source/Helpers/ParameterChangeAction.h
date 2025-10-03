@@ -1,7 +1,7 @@
 //==============================================================================
 //
 //  Copyright 2025 Juan Carlos Blancas
-//  This file is part of JCBMaximizer and is licensed under the GNU General Public License v3.0 or later.
+//  This file is part of JCBCompressor and is licensed under the GNU General Public License v3.0 or later.
 //
 //==============================================================================
 #pragma once

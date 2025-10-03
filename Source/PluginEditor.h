@@ -84,7 +84,7 @@ private:
     static constexpr int REFERENCE_WIDTH = 700;
     static constexpr int REFERENCE_HEIGHT = 200;
     
-    // Constantes de diseño - coincidiendo exactamente con JCBExpansorGate
+    // Constantes de diseño
     static constexpr int DEFAULT_WIDTH = 1260;  // Cambiado para obtener ratio exacto de 3.5
     static constexpr int DEFAULT_HEIGHT = 360;   // 1260/360 = 3.5
     static constexpr float ASPECT_RATIO = static_cast<float>(REFERENCE_WIDTH) / static_cast<float>(REFERENCE_HEIGHT); // 3.5
@@ -224,13 +224,11 @@ private:
     // COMPONENTES DE METERS
     //==========================================================================
     
-    // Medidores con posicionamiento exacto desde JCBExpansorGate
+    // Posicionamiento de medidores
     GradientMeter inputMeterL, inputMeterR;
     GradientMeterInv grMeter;  // Mantener GradientMeterInv - muestra reducción desde arriba que es correcto para compresor
     GradientMeterOutput outputMeterL, outputMeterR;
     
-    // MAXIMIZER: Medidores sidechain comentados (no tiene sidechain externo)
-    // SidechainMeter scMeterL, scMeterR;
     
     //==========================================================================
     // SLIDERS DE TRIM (superpuestos a meters)
@@ -242,7 +240,6 @@ private:
     std::unique_ptr<CustomSliderAttachment> trimAttachment;
     std::unique_ptr<CustomSliderAttachment> makeupAttachment;  // RESTAURADO: para i_MAKEUP
     
-    // MAXIMIZER: No sidechain trim - removed scTrimSlider and scTrimAttachment
     
     //==========================================================================
     // DISPLAYS DE VALOR INDEPENDIENTES
@@ -257,21 +254,17 @@ private:
     struct LeftTopKnobs {
         CustomSlider thdSlider{"thd"};
         CustomSlider ceilingSlider{"ceiling"};  // NUEVO - parámetro b_CELLING específico del Maximizer
-        // MAXIMIZER: c_RATIO y q_KNEE no existen - eliminados según CONTEXTO.txt
         
         std::unique_ptr<CustomSliderAttachment> thdAttachment;
         std::unique_ptr<CustomSliderAttachment> ceilingAttachment;  // NUEVO - attachment para b_CELLING
-        // MAXIMIZER: ratioAttachment y kneeAttachment eliminados - parámetros inexistentes
     } leftTopKnobs;
 
     
     // Controles derechos - fila superior
     struct RightTopControls {
-        // MAXIMIZER: h_RANGE, g_REACT y z_SMOOTH no existen - eliminados según CONTEXTO.txt
         CustomSlider detSlider{"detect"};  // NUEVO - parámetro l_DETECT (Peak/RMS detection)
         CustomSlider lookaheadSlider{"lookahead"};  // MOVIDO desde LeftBottomKnobs para mejor distribución visual
         
-        // MAXIMIZER: rangeAttachment, reactAttachment y smoothAttachment eliminados - parámetros inexistentes
         std::unique_ptr<CustomSliderAttachment> detAttachment;  // NUEVO - attachment para l_DETECT
         std::unique_ptr<CustomSliderAttachment> lookaheadAttachment;  // MOVIDO desde LeftBottomKnobs
     } rightTopControls;
@@ -283,40 +276,18 @@ private:
         juce::TextButton autorelButton{"AUTOREL"};  // NUEVO - parámetro m_AUTOREL
         juce::TextButton ditherButton{"DITHER"};  // MOVIDO desde LeftBottomKnobs para consistencia con posición visual
         juce::TextButton dcFilterButton{"DC FILTER"};  // NUEVO - filtro DC offset post-procesamiento
-        // MAXIMIZER: f_HOLD no existe - eliminado según CONTEXTO.txt
         
         std::unique_ptr<CustomSliderAttachment> atkAttachment;
         std::unique_ptr<CustomSliderAttachment> relAttachment;
         std::unique_ptr<UndoableButtonAttachment> autorelAttachment;  // NUEVO - attachment para m_AUTOREL
         std::unique_ptr<UndoableButtonAttachment> ditherAttachment;  // MOVIDO desde LeftBottomKnobs para consistencia con posición visual
         std::unique_ptr<UndoableButtonAttachment> dcFilterAttachment;  // NUEVO - attachment para o_DCFILT
-        // MAXIMIZER: holdAttachment eliminado - parámetro inexistente
     } rightBottomKnobs;
     
     //==========================================================================
-    // MAXIMIZER: CONTROLES DE SIDECHAIN COMENTADOS (no tiene sidechain externo)
     //==========================================================================
     
-    // MAXIMIZER: Controles sidechain comentados completos
-    /*
-    struct SidechainControls {
-        CustomSlider hpfSlider{"hpf"};
-        CustomSlider lpfSlider{"lpf"};
-        juce::TextButton scButton{"FILTERS"};
-        juce::TextButton keyButton{"EXT KEY"};
-        juce::TextButton soloScButton{"SOLO SC"};
-        juce::TextButton hpfOrderButton{"12"};
-        juce::TextButton lpfOrderButton{"12"};
-        
-        std::unique_ptr<CustomSliderAttachment> hpfAttachment;
-        std::unique_ptr<CustomSliderAttachment> lpfAttachment;
-        std::unique_ptr<UndoableButtonAttachment> scAttachment;
-        std::unique_ptr<UndoableButtonAttachment> keyAttachment;
-        std::unique_ptr<UndoableButtonAttachment> soloScAttachment;
-        std::unique_ptr<UndoableButtonAttachment> hpfOrderAttachment;
-        std::unique_ptr<UndoableButtonAttachment> lpfOrderAttachment;
-    } sidechainControls;
-    */
+    
     
     //==========================================================================
     // GRUPOS DE BUTTONS (organizados por función y ubicación)
@@ -374,8 +345,8 @@ private:
     // BACKGROUND E IMAGES
     //==========================================================================
     
-    // Título y versión en la parte inferior (combinado como ExpansorGate)
-    juce::TextButton titleLink{"JCBMaximizer v1.0.0-alpha.1"};
+    // Título y versión en la parte inferior
+    juce::TextButton titleLink{"JCBMaximizer v1.0.0-alpha.2"};
     
     // Imágenes de fondo
     juce::ImageComponent backgroundImage;
@@ -385,7 +356,6 @@ private:
     juce::Image diagramBackground;
     
     // Iconos de filtro
-    // MAXIMIZER: No filter icons - removed hpfIcon, lpfIcon, hpfOffImage, lpfOffImage
     
     //==========================================================================
     // COMPONENTES DE OVERLAY Y DIALOG
@@ -751,7 +721,6 @@ private:
             // Verde: Parámetros de detector (ATK, REL, HOLD, REACT, SMO) y modo DELTA
             // Púrpura: Parámetros de ganancia (THD, RATIO, KNEE, RANGE) y parallel
             // Azul: Procesamiento core, salida, makeup y temporal (lookahead)
-            // Blanco: Filtros sidechain (HPF, LPF)
             // Gris: Controles de nivel (trim)
             
             if (blockName == "DETECTOR")
@@ -761,7 +730,7 @@ private:
             else if (blockName == "GAIN CORE" || blockName == "MAKEUP" || blockName == "OUTPUT" || blockName == "LOOKAHEAD")
                 return DarkTheme::accent;  // Azul (procesamiento core, salida, temporal)
             else if (blockName == "FILTERS")
-                return DarkTheme::textPrimary;  // Blanco (filtros HPF, LPF sidechain)
+                return DarkTheme::textPrimary;
             else if (blockName == "PARALLEL")
                 return DarkTheme::accentSecondary;  // Púrpura (parallel)
             else if (blockName == "TRIM IN" || blockName == "TRIM SC")
@@ -851,8 +820,6 @@ private:
     //==========================================================================
     void setupKnobs();
     void setupMeters();
-    // MAXIMIZER: No sidechain functionality - setupSidechainControls() commented out
-    // void setupSidechainControls();
     void setupPresetArea();
     void setupUtilityButtons();
     void setupParameterButtons();
@@ -863,8 +830,6 @@ private:
     //==========================================================================
     void updateButtonStates();
     void updateBasicButtonStates();
-    // MAXIMIZER: No sidechain components - commenting out function declaration
-    // void updateSidechainComponentStates();
     void updateBackgroundState();
     void updateFilterButtonText();
     void updateMeterStates();

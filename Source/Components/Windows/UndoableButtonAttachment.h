@@ -109,7 +109,6 @@ private:
         bool shouldBeToggled = newValue >= 0.5f;
         button.setToggleState(shouldBeToggled, juce::dontSendNotification);
         
-        // MAXIMIZER: No filter order parameters - comentado según CONTEXTO.txt
         // juce::String paramId = parameter.getParameterID();
         // if (paramId == "j_HPFORDER" || paramId == "k_LPFORDER")
         // {
