@@ -1,0 +1,148 @@
+// in1: Señal L con trim (sin delay desde InputTrim)
+// in2: Señal R con trim (sin delay desde InputTrim)
+
+// out1: Envolvente en dB
+// out2: Ceiling suavizado en dB
+// out3: Threshold linear
+// out4: Ceiling linear
+
+// PARÁMETROS
+Param b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB
+Param a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB)
+Param d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms
+Param e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms
+Param l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)
+Param m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)
+
+// HISTORIAS
+History smoothedGain(0);         // Suavizado del gain
+History smoothedCeiling(0);      // Suavizado del techo
+History envelopeFollower(0);     // Seguidor de envolvente
+History gainReduction(0);        // Reducción de ganancia actual
+History detectHistory(0);        // Para suavizado del modo de detección
+History autoReleaseHistory(0);   // Para suavizado del auto-release
+History transientDetector(0);    // Detector de transientes para auto-release
+History prevDetection(0);        // Detección anterior para calcular cambios
+History rmsSum(0);               // Suma para RMS sliding window
+
+// DELAYS
+Delay rmsDelay(500);             // Buffer para RMS sliding window
+
+// CONSTANTES
+SMOOTH_HISTORY_FACTOR = 0.999;
+SMOOTH_PARAM_FACTOR = 0.001;
+expConstant = -0.99967234081321;
+
+// PROCESAMIENTO
+// Suavizado del gain (conversión a threshold negativo)
+smoothedGain = smoothedGain * 0.999 + (-a_GAIN) * 0.001;
+smoothedGain = fixdenorm(smoothedGain);
+
+// Conversión de threshold a factor lineal
+thresholdLinear = 1 / pow(10, smoothedGain / 20);
+
+// Suavizado del ceiling
+smoothedCeiling = smoothedCeiling * 0.999 + b_CELLING * 0.001;
+smoothedCeiling = fixdenorm(smoothedCeiling);
+
+// Suavizado de otros parámetros
+smoothedDetect = detectHistory * 0.999 + l_DETECT * 0.001;
+detectHistory = fixdenorm(smoothedDetect);
+
+smoothedAutoRelease = autoReleaseHistory * 0.999 + m_AUTOREL * 0.001;
+autoReleaseHistory = fixdenorm(smoothedAutoRelease);
+
+// Conversión a lineal
+ceilingLinear = dbtoa(b_CELLING);
+
+// Aplicar ceiling y threshold a las entradas (ya vienen con trim desde InputTrim)
+rightScaled = ceilingLinear * in2 * thresholdLinear;
+leftScaled = ceilingLinear * in1 * thresholdLinear;
+
+// Promedio de ambos canales para detección
+averageSignal = (leftScaled + rightScaled) * 0.5;
+
+// DC-blocker nativo gen~
+detIn = dcblock(averageSignal);
+
+// Peak detection
+peakDetection = abs(detIn);
+
+// RMS sliding window (ventana de ~3ms)
+rmsWindowSize = max(1, floor(3 * samplerate * 0.001));
+rmsWindowInv = 1 / rmsWindowSize;
+
+// RMS sliding window con detIn
+signalSquared = detIn * detIn;
+
+// PRE-WRITE antes del read
+rmsDelay.write(signalSquared);
+
+// Read correcto con pre-write
+oldestSquared = rmsDelay.read(rmsWindowSize, interp="none");
+
+rmsSumNew = (signalSquared + rmsSum) - oldestSquared;
+rmsSumClipped = max(0, rmsSumNew);
+rmsDetection = sqrt(rmsSumClipped * rmsWindowInv);
+
+// Historial
+rmsSum = fixdenorm(rmsSumClipped);
+
+// Interpolar entre Peak y RMS según el parámetro
+detectionSignal = mix(peakDetection, rmsDetection, smoothedDetect);
+
+// Auto-release: detectar transientes y ajustar release dinámicamente
+finalReleaseTime = e_REL;  // Por defecto usar release manual
+
+if(smoothedAutoRelease > 0.01) {
+    // Calcular cambio en la señal
+    signalChange = abs(detectionSignal - prevDetection);
+    prevDetection = detectionSignal;
+    
+    // Detectar si es transiente (cambio rápido) o sostenido
+    relativeThreshold = max(0.001, detectionSignal * 0.1);  // 10% del nivel actual
+    isTransient = signalChange > relativeThreshold ? 1 : 0;
+    
+    // Suavizar detección de transientes
+    transientSmooth = 0.99;  // Respuesta rápida
+    transientDetector = (transientDetector * transientSmooth) + (isTransient * (1 - transientSmooth));
+    
+    // Definir rangos de release para limitador
+    fastRelease = 5;     // 5ms para transientes (muy rápido)
+    slowRelease = 150;   // 150ms para material sostenido
+    
+    // Interpolar basado en contenido detectado
+    autoRelease = mix(slowRelease, fastRelease, transientDetector);
+    
+    // Mezclar release manual con auto
+    finalReleaseTime = mix(e_REL, autoRelease, smoothedAutoRelease);
+}
+
+// Constante de tiempo para release final
+releaseTime = finalReleaseTime * 0.001 * samplerate;
+releaseCoeff = exp(expConstant / releaseTime);
+
+// Seguidor de envolvente con release
+envelopeFollower = max(detectionSignal, envelopeFollower * releaseCoeff);
+
+// Constante de tiempo para attack
+attackTime = d_ATK * 0.001 * samplerate;
+attackCoeff = exp(expConstant / attackTime);
+
+// Aplicar attack al seguidor de envolvente
+gainReduction = gainReduction * attackCoeff + envelopeFollower * (1 - attackCoeff);
+gainReduction = max(gainReduction, 0.000001);  // Evitar valores negativos o cero
+gainReduction = fixdenorm(gainReduction);
+
+// Conversión a dB para procesar con soft knee
+gainReductionDb = atodb(gainReduction);
+
+// Actualizar historiales para siguiente muestra
+envelopeFollower = fixdenorm(envelopeFollower);
+prevDetection = detectionSignal;
+
+// SALIDAS
+out1 = gainReductionDb;     // Envolvente en dB
+out2 = smoothedCeiling;     // Ceiling suavizado en dB para GainCalc
+out3 = thresholdLinear;     // Threshold linear
+out4 = ceilingLinear;       // Ceiling linear

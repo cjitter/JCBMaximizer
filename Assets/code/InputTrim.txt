@@ -1,0 +1,69 @@
+// in1: Audio L original
+// in2: Audio R original
+
+// out1: L con trim y delay
+// out2: R con trim y delay
+// out3: L con trim sin delay (para detección)
+// out4: R con trim sin delay (para detección)
+// out5: L original con delay (para bypass sin trim)
+// out6: R original con delay (para bypass sin trim)
+
+// PARÁMETROS
+Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)
+Param n_LOOKAHEAD(0, min=0, default=0, max=5);     // Lookahead time (ms)
+
+// HISTORIAS
+History trimHistory(0);          // Para suavizado del trim
+History lookaheadHistory(0);     // Para suavizado del lookahead
+
+// DELAYS
+Delay leftOutputDelay(samplerate);      // Delay señal izquierda con trim
+Delay rightOutputDelay(samplerate);     // Delay señal derecha con trim
+Delay leftInputDelay(samplerate);       // Delay señal izquierda sin trim
+Delay rightInputDelay(samplerate);      // Delay señal derecha sin trim
+
+// CONSTANTES
+SMOOTH_HISTORY_FACTOR = 0.999;
+SMOOTH_PARAM_FACTOR = 0.001;
+LOOKAHEAD_SMOOTH_FACTOR = 0.99;
+LOOKAHEAD_PARAM_FACTOR = 0.01;
+
+// PROCESAMIENTO
+// Suavizado del trim (igual que GenExpr)
+smoothedTrim = trimHistory * SMOOTH_HISTORY_FACTOR + j_TRIM * SMOOTH_PARAM_FACTOR;
+trimHistory = fixdenorm(smoothedTrim);
+trimGainLinear = dbtoa(smoothedTrim);
+
+// Suavizado del lookahead (más rápido como en GenExpr)
+smoothedLookahead = lookaheadHistory * LOOKAHEAD_SMOOTH_FACTOR + n_LOOKAHEAD * LOOKAHEAD_PARAM_FACTOR;
+lookaheadHistory = fixdenorm(smoothedLookahead);
+
+// Convertir tiempo de lookahead (ms) a muestras
+lookaheadSamples = round(mstosamps(smoothedLookahead));
+
+// Por seguridad, clamp del índice (lookahead máx 5 ms << samplerate)
+lh = clamp(lookaheadSamples, 0, samplerate - 1);
+
+// Aplicar trim
+leftTrimmed = in1 * trimGainLinear;
+rightTrimmed = in2 * trimGainLinear;
+
+// PRE-WRITE de todos los delays antes del read
+leftOutputDelay.write(leftTrimmed);      // con trim (rama WET)
+rightOutputDelay.write(rightTrimmed);    // con trim (rama WET)
+leftInputDelay.write(in1);               // sin trim (bypass real)
+rightInputDelay.write(in2);              // sin trim (bypass real)
+
+// Lecturas en STEP para evitar interpolación y mantener PDC limpia
+leftDelayed = leftOutputDelay.read(lh, interp="step");
+rightDelayed = rightOutputDelay.read(lh, interp="step");
+leftOriginalDelayed = leftInputDelay.read(lh, interp="step");
+rightOriginalDelayed = rightInputDelay.read(lh, interp="step");
+
+// SALIDAS
+out1 = leftDelayed;           // L con trim y delay
+out2 = rightDelayed;          // R con trim y delay
+out3 = leftTrimmed;           // L con trim sin delay (para detección)
+out4 = rightTrimmed;          // R con trim sin delay (para detección)
+out5 = leftOriginalDelayed;  // L original con delay (para bypass)
+out6 = rightOriginalDelayed; // R original con delay (para bypass)

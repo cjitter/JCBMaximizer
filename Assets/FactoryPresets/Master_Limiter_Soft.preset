@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<PARAMETERS>
+  <PARAM id="a_GAIN" value="1.0"/>
+  <PARAM id="b_CELLING" value="-0.09999910742044449"/>
+  <PARAM id="d_ATK" value="10.0"/>
+  <PARAM id="e_REL" value="1.0"/>
+  <PARAM id="g_DITHER" value="0.0"/>
+  <PARAM id="h_BYPASS" value="0.0"/>
+  <PARAM id="i_MAKEUP" value="1.788139343261719e-7"/>
+  <PARAM id="j_TRIM" value="1.788139343261719e-7"/>
+  <PARAM id="k_DELTA" value="0.0"/>
+  <PARAM id="l_DETECT" value="1.0"/>
+  <PARAM id="m_AUTOREL" value="0.0"/>
+  <PARAM id="n_LOOKAHEAD" value="5.0"/>
+  <PARAM id="o_DCFILT" value="0.0"/>
+  <Presets currentPresetID="0" tooltipEnabled="1" presetDisplayText="DEFAULT"
+           presetTextItalic="0" envelopeVisualEnabled="1" tooltipLanguageEnglish="0"
+           editorWidth="1260" editorHeight="360"/>
+  <ABStates isStateA="1">
+    <StateA/>
+    <StateB/>
+  </ABStates>
+  <UISettings displayGraphicsEnvelopes="1"/>
+</PARAMETERS>

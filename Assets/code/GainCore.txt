@@ -1,0 +1,132 @@
+// in1: Envolvente dB (desde Detector out1)
+// in2: Ceiling suavizado dB (desde Detector out2)
+// in3: Señal L con delay (desde InputTrim out1)
+// in4: Señal R con delay (desde InputTrim out2)
+// in5: Threshold linear (desde Detector out3)
+// in6: Ceiling linear (desde Detector out4)
+
+// out1: Señal L procesada
+// out2: Señal R procesada
+// out3: Señal L con drive (programa driven)
+// out4: Señal R con drive (programa driven)
+// out5: Reducción de ganancia final promedio
+// out6: Delta L raw
+// out7: Delta R raw
+
+// FUNCIÓN SOFT KNEE LIMITER
+softkneeLimiter(xg, threshold, kneeWidth) {
+    ret = 0;
+    
+    if ((2 * (xg - threshold)) < (kneeWidth * (-1))) {
+        ret = xg;
+    }
+    else if ((2 * abs(xg - threshold)) <= kneeWidth) {
+        ret = xg - (pow((xg - threshold) - (kneeWidth / 2), 2) / (2 * kneeWidth));
+    }
+    else if ((2 * (xg - threshold)) > kneeWidth) {
+        ret = threshold;
+    }
+    
+    return ret;
+}
+
+// PARÁMETROS
+Param o_DCFILT(0, min=0, default=0, max=1);   // Filtro DC post (0=off,1=on)
+
+// HISTORIAS
+History hpfPrevInL(0);
+History hpfPrevInR(0);
+History hpfStateL(0);
+History hpfStateR(0);
+History dcFiltHistory(0);        // Suavizado del conmutador o_DCFILT (anti-click)
+
+// PROCESAMIENTO
+// Suavizado del filtro DC (anti-click al conmutar)
+smoothedDCFILT = dcFiltHistory * 0.95 + o_DCFILT * 0.05;
+dcFiltHistory = fixdenorm(smoothedDCFILT);
+
+// Aplicar soft knee limiter con knee=0 (hard knee)
+limitedDb = softkneeLimiter(in1, in2, 0);
+
+// Calcular reducción de ganancia envolvente
+gainReductionAmount = limitedDb - in1;
+gainReductionAmount = max(gainReductionAmount, -144);
+gainReductionLinear = dbtoa(gainReductionAmount);
+
+// Conversión de ceiling a lineal (usando in6 que viene de Detector)
+ceilingLinear = in6;
+ceilingNegative = ceilingLinear * -1;
+ceilingPositive = ceilingLinear * 1;
+
+// ====================================
+// BRICKWALL: GANANCIA INSTANTÁNEA POR MUESTRA
+// ====================================
+// Ruta de PROGRAMA: usar la señal post-trim y post-lookahead
+programL = in3;  // Señal L con delay desde InputTrim
+programR = in4;  // Señal R con delay desde InputTrim
+
+// Incluir el "drive" del maximizador mediante thresholdLinear
+programDrivenL = programL * in5;  // in5 = thresholdLinear
+programDrivenR = programR * in5;
+
+// Cálculo de ganancia segura por canal para encajar en ceiling
+bw_eps = 1e-12;
+g_br_L = min(1, ceilingLinear / max(abs(programDrivenL), bw_eps));
+g_br_R = min(1, ceilingLinear / max(abs(programDrivenR), bw_eps));
+
+// Conservar la envolvente temporal como compresión musical
+// usar el mínimo de ambos factores (brickwall y envolvente)
+finalGain_L = min(g_br_L, gainReductionLinear);
+finalGain_R = min(g_br_R, gainReductionLinear);
+
+// ====================================
+// PROCESAMIENTO CANAL IZQUIERDO
+// ====================================
+leftProcessed = programDrivenL * finalGain_L;
+
+// HPF 1º ORDEN PRE-CEILING (ON/OFF)
+dc_fc = 12;
+dc_r  = exp(-2 * pi * dc_fc / samplerate);
+
+// y = x - x_prev + r*y_prev (canal L)
+hpfOutL_pre = (leftProcessed - hpfPrevInL) + dc_r * hpfStateL;
+hpfPrevInL = leftProcessed;
+hpfStateL  = hpfOutL_pre;
+
+// Selección ON/OFF antes del clamp
+leftPre = mix(leftProcessed, hpfOutL_pre, smoothedDCFILT);
+
+// Aplicar clipping
+leftClipped = clamp(leftPre, ceilingNegative, ceilingPositive);
+leftDeltaRaw = programDrivenL - leftClipped;   // delta crudo
+
+// ====================================
+// PROCESAMIENTO CANAL DERECHO
+// ====================================
+rightProcessed = programDrivenR * finalGain_R;
+
+// HPF 1º ORDEN PRE-CEILING (ON/OFF) - canal R
+hpfOutR_pre = (rightProcessed - hpfPrevInR) + dc_r * hpfStateR;
+hpfPrevInR = rightProcessed;
+hpfStateR  = hpfOutR_pre;
+
+// Selección ON/OFF antes del clamp
+rightPre = mix(rightProcessed, hpfOutR_pre, smoothedDCFILT);
+
+// Aplicar clipping
+rightClipped = clamp(rightPre, ceilingNegative, ceilingPositive);
+rightDeltaRaw = programDrivenR - rightClipped;
+
+// ====================================
+// GAIN REDUCTION OUTPUT - Para medidor
+// ====================================
+finalGainDisplay = (min(g_br_L, gainReductionLinear) + min(g_br_R, gainReductionLinear)) * 0.5;
+
+// SALIDAS
+out1 = leftClipped;           // L procesada con HPF opcional
+out2 = rightClipped;          // R procesada con HPF opcional
+out3 = programDrivenL;        // L con drive (para delta en Output)
+out4 = programDrivenR;        // R con drive (para delta en Output)
+out5 = finalGainDisplay;      // Reducción de ganancia final promedio
+out6 = leftDeltaRaw;          // Delta L raw
+out7 = rightDeltaRaw;         // Delta R raw

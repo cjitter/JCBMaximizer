@@ -1,0 +1,139 @@
+// in1: L procesada (desde GainCore)
+// in2: R procesada (desde GainCore)
+// in3: L original delay (desde InputTrim)
+// in4: R original delay (desde InputTrim)
+// in5: L con drive (desde GainCore)
+// in6: R con drive (desde GainCore)
+// in7: GR final promedio (desde GainCore)
+// in8: Delta L raw (desde GainCore)
+// in9: Delta R raw (desde GainCore)
+// in10: Ceiling linear (desde Detector)
+
+// out1: Audio L final
+// out2: Audio R final
+// out3: Gain reduction para medidor (0-1)
+
+// PARÁMETROS
+Param h_BYPASS(0, min=0, default=0, max=1);        // Bypass del efecto (0-1)
+Param k_DELTA(0, min=0, default=0, max=1);         // Delta mode (0-1)
+Param i_MAKEUP(0, min=-12, default=0, max=12);     // Makeup gain post-proceso (dB)
+Param g_DITHER(0, min=0, default=0, max=1);        // Cantidad de dither (0-1)
+
+// HISTORIAS
+History smoothedBypass(0);       // Suavizado del bypass
+History deltaHistory(0);         // Suavizado del modo delta
+History smoothedMakeup(0);       // Suavizado del makeup gain
+History progRmsStateL(0);        // RMS corto del programa L
+History progRmsStateR(0);        // RMS corto del programa R
+History deltaRmsStateL(0);       // RMS corto del delta L
+History deltaRmsStateR(0);       // RMS corto del delta R
+
+// CONSTANTES
+SMOOTH_HISTORY_FACTOR = 0.999;
+SMOOTH_PARAM_FACTOR = 0.001;
+ditherAmount = 1.5258789062e-05;
+expConstant = -0.99967234081321;
+
+// PROCESAMIENTO
+// Suavizado de parámetros
+smoothedBypass = smoothedBypass * SMOOTH_HISTORY_FACTOR + h_BYPASS * SMOOTH_PARAM_FACTOR;
+smoothedBypass = fixdenorm(smoothedBypass);
+wetAmount = 1 - smoothedBypass;
+
+smoothedDelta = deltaHistory * SMOOTH_HISTORY_FACTOR + k_DELTA * SMOOTH_PARAM_FACTOR;
+deltaHistory = fixdenorm(smoothedDelta);
+
+smoothedMakeup = smoothedMakeup * SMOOTH_HISTORY_FACTOR + i_MAKEUP * SMOOTH_PARAM_FACTOR;
+smoothedMakeup = fixdenorm(smoothedMakeup);
+makeupLinear = dbtoa(smoothedMakeup);
+
+// Aplicar makeup gain SOLO cuando NO está en modo delta
+leftWithMakeup = in1 * makeupLinear;
+rightWithMakeup = in2 * makeupLinear;
+leftProcessed = mix(in1, leftWithMakeup, 1 - smoothedDelta);
+rightProcessed = mix(in2, rightWithMakeup, 1 - smoothedDelta);
+
+// ====================================
+// DELTA AUTO-NORMALIZADO (RMS corto ~20ms) — POR CANAL
+// ====================================
+rmsTimeSamples = max(1, floor(0.02 * samplerate));
+rmsCoeff = exp(expConstant / rmsTimeSamples);
+
+// RMS del programa por canal (usando señal con drive)
+progLSq = in5 * in5;  // in5 = programDrivenL
+progRSq = in6 * in6;  // in6 = programDrivenR
+progRmsStateL = progRmsStateL * rmsCoeff + progLSq * (1 - rmsCoeff);
+progRmsStateR = progRmsStateR * rmsCoeff + progRSq * (1 - rmsCoeff);
+progRmsL = sqrt(max(progRmsStateL, 1e-12));
+progRmsR = sqrt(max(progRmsStateR, 1e-12));
+
+// RMS del delta por canal (usando delta raw desde GainCore)
+deltaLSq = in8 * in8;   // in8 = leftDeltaRaw
+deltaRSq = in9 * in9;   // in9 = rightDeltaRaw
+deltaRmsStateL = deltaRmsStateL * rmsCoeff + deltaLSq * (1 - rmsCoeff);
+deltaRmsStateR = deltaRmsStateR * rmsCoeff + deltaRSq * (1 - rmsCoeff);
+deltaRmsL = sqrt(max(deltaRmsStateL, 1e-12));
+deltaRmsR = sqrt(max(deltaRmsStateR, 1e-12));
+
+// Normalizar delta al RMS del programa por canal
+normGainL = min(1, progRmsL / max(deltaRmsL, 1e-12));
+normGainR = min(1, progRmsR / max(deltaRmsR, 1e-12));
+
+leftDeltaNorm  = in8 * normGainL;
+rightDeltaNorm = in9 * normGainR;
+
+// ====================================
+// DELTA LOUDNESS GUARD (dependiente de GR)
+// ====================================
+grLinAvg = in7;  // Ya viene promediado desde GainCore
+grDb = atodb(max(grLinAvg, 1e-12));
+
+// Empezar a atenuar delta por encima de 6 dB de GR
+t = clamp((-grDb - 6) / 12, 0, 1);
+deltaLoudnessFactor = mix(1.0, 0.35, t);
+
+leftDeltaNorm  = leftDeltaNorm  * deltaLoudnessFactor;
+rightDeltaNorm = rightDeltaNorm * deltaLoudnessFactor;
+
+// ====================================
+// DELTA PEAK SAFETY (evita overs/clip del delta)
+// ====================================
+ceilingLinear = in10;  // in10 = ceiling linear desde Detector
+deltaPeakGuardL = min(1, ceilingLinear / max(abs(leftDeltaNorm), 1e-12));
+deltaPeakGuardR = min(1, ceilingLinear / max(abs(rightDeltaNorm), 1e-12));
+leftDeltaSafe  = leftDeltaNorm  * deltaPeakGuardL;
+rightDeltaSafe = rightDeltaNorm * deltaPeakGuardR;
+
+// Aplicar delta auto-normalizado
+leftWithDelta  = mix(leftProcessed,  leftDeltaSafe,  smoothedDelta);
+rightWithDelta = mix(rightProcessed, rightDeltaSafe, smoothedDelta);
+
+// Mezclar con señal original según bypass
+leftFinal = mix(in3, leftWithDelta, wetAmount);
+rightFinal = mix(in4, rightWithDelta, wetAmount);
+
+// ====================================
+// GENERACIÓN DE DITHER (TPDF) DESCORRELACIONADO L/R
+// ====================================
+noiseL1 = noise() * ditherAmount * 0.5;
+noiseL2 = noise() * ditherAmount * 0.5;
+ditherTPDF_L = noiseL1 + noiseL2;
+
+noiseR1 = noise() * ditherAmount * 0.5;
+noiseR2 = noise() * ditherAmount * 0.5;
+ditherTPDF_R = noiseR1 + noiseR2;
+
+ditherGatedL = gate(g_DITHER, ditherTPDF_L);
+ditherGatedR = gate(g_DITHER, ditherTPDF_R);
+
+// Aplicar dither como último paso
+out1 = leftFinal + ditherGatedL;
+out2 = rightFinal + ditherGatedR;
+
+// ====================================
+// GAIN REDUCTION OUTPUT - Para medidor
+// ====================================
+gainReductionMeter = mix(1, in7, wetAmount);
+gainReductionOutput = clamp(gainReductionMeter, 0, 1);
+
+out3 = gainReductionOutput;

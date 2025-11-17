@@ -1,0 +1,482 @@
+// ====================================
+// FUNCIÓN SOFT KNEE LIMITER
+// ====================================
+// Aplica limitación con transición suave (soft knee)
+// xg: nivel de entrada en dB
+// threshold: umbral de limitación en dB
+// kneeWidth: ancho de la transición suave en dB
+softkneeLimiter(xg, threshold, kneeWidth) {
+    ret = 0;
+    
+    // Si la señal está muy por debajo del umbral (fuera de la rodilla)
+    if ((2 * (xg - threshold)) < (kneeWidth * (-1))) {
+        ret = xg;  // No hay reducción
+    }
+    // Si la señal está dentro de la zona de transición suave (rodilla)
+    else if ((2 * abs(xg - threshold)) <= kneeWidth) {
+        // Aplica reducción cuadrática para transición suave
+        ret = xg - (pow((xg - threshold) - (kneeWidth / 2), 2) / (2 * kneeWidth));
+    }
+    // Si la señal está por encima del umbral (fuera de la rodilla)
+    else if ((2 * (xg - threshold)) > kneeWidth) {
+        ret = threshold;  // Limitación total al umbral
+    }
+    
+    return ret;
+}
+
+
+// ====================================
+// DECLARACIÓN DE PARÁMETROS
+// ====================================
+Param d_ATK(0, min=0.01, default=100, max=750);    // Tiempo de ataque en ms
+Param b_CELLING(0, min=-60, default=-0.3, max=0);  // Techo máximo en dB
+Param a_GAIN(0, min=0, default=0, max=24);         // Input gain (dB) - moderno
+Param e_REL(0, min=1, default=200, max=1000);      // Tiempo de release en ms
+Param g_DITHER(0, min=0, default=0, max=1);        // Cantidad de dither (0-1)
+Param h_BYPASS(0, min=0, default=0, max=1);        // Bypass del efecto (0-1)
+Param i_MAKEUP(0, min=-12, default=0, max=12);     // Makeup gain post-proceso (dB)
+Param j_TRIM(-12, min=-12, default=0, max=12);     // Input trim gain (dB)
+Param k_DELTA(0, min=0, default=0, max=1);         // Delta mode (0-1)
+Param l_DETECT(0, min=0, default=0, max=1);        // Detection mode (0=Peak, 1=RMS)
+Param m_AUTOREL(0, min=0, default=0, max=1);       // Auto-release enable (0-1)
+
+Param o_DCFILT(0, min=0, default=0, max=1);   // Filtro DC post (0=off,1=on)
+Param n_LOOKAHEAD(0, min=0, default=0, max=5);     // Lookahead time (ms)
+
+// ====================================
+// VARIABLES DE ESTADO (HISTORIALES)
+// ====================================
+History smoothedGain(0);         // Suavizado del gain (antes threshold)
+History smoothedCeiling(0);      // Suavizado del techo
+History smoothedBypass(0);       // Suavizado del bypass
+History smoothedMakeup(0);       // Suavizado del makeup gain
+History envelopeFollower(0);     // Seguidor de envolvente para detección RMS
+History gainReduction(0);        // Reducción de ganancia actual
+History lookaheadHistory(0);     // Para suavizado del lookahead
+History trimHistory(0);          // Para suavizado del trim
+History deltaHistory(0);         // Para suavizado del modo delta
+History detectHistory(0);        // Para suavizado del modo de detección
+History autoReleaseHistory(0);   // Para suavizado del auto-release
+History transientDetector(0);    // Detector de transientes para auto-release
+History prevDetection(0);        // Detección anterior para calcular cambios
+History rmsSum(0);               // Suma para RMS sliding window
+
+History progRmsStateL(0);        // RMS corto del programa L
+History progRmsStateR(0);        // RMS corto del programa R
+History deltaRmsStateL(0);       // RMS corto del delta L
+History deltaRmsStateR(0);       // RMS corto del delta R
+
+History hpfPrevInL(0);
+History hpfPrevInR(0);
+History hpfStateL(0);
+History hpfStateR(0);
+History dcFiltHistory(0);        // Suavizado del conmutador o_DCFILT (anti-click)
+
+// ====================================
+// LÍNEAS DE DELAY PARA LOOKAHEAD
+// ====================================
+Delay delayLeft(samplerate);        // Delay canal izquierdo (con trim)
+Delay delayRight(samplerate);       // Delay canal derecho (con trim)
+Delay delayDetectLeft(samplerate);  // Delay detección izquierda
+Delay delayDetectRight(samplerate); // Delay detección derecha
+Delay leftInputDelay(samplerate);   // Delay canal izquierdo (sin trim para bypass)
+Delay rightInputDelay(samplerate);  // Delay canal derecho (sin trim para bypass)
+Delay rmsDelay(500);                // Buffer para RMS sliding window (500 samples ~10ms @ 48kHz)
+
+// ====================================
+// CONSTANTES GLOBALES
+// ====================================
+ditherAmount = 1.5258789062e-05;       // Cantidad de ruido para dither
+SMOOTH_HISTORY_FACTOR = 0.999;         // Factor de suavizado para valores históricos (99.9%)
+SMOOTH_PARAM_FACTOR = 0.001;           // Factor de suavizado para nuevos parámetros (0.1%)
+LOOKAHEAD_SMOOTH_FACTOR = 0.99;        // Factor de suavizado para lookahead
+expConstant = -0.99967234081321;       // Constante para cálculo exponencial de tiempos
+
+// ====================================
+// SUAVIZADO DE PARÁMETROS
+// ====================================
+// Suavizado del trim
+smoothedTrim = trimHistory * 0.999 + j_TRIM * 0.001;
+trimHistory = fixdenorm(smoothedTrim);
+trimLinear = dbtoa(smoothedTrim);
+
+// Suavizado del threshold con factor 0.999
+smoothedGain = smoothedGain * 0.999 + (-a_GAIN) * 0.001;
+smoothedGain = fixdenorm(smoothedGain);
+
+// Conversión de threshold a factor lineal
+thresholdLinear = 1 / pow(10, smoothedGain / 20);
+
+// Suavizado del ceiling
+smoothedCeiling = smoothedCeiling * 0.999 + b_CELLING * 0.001;
+smoothedCeiling = fixdenorm(smoothedCeiling);
+
+// Suavizado del bypass
+smoothedBypass = smoothedBypass * 0.999 + h_BYPASS * 0.001;
+smoothedBypass = fixdenorm(smoothedBypass);
+wetAmount = 1 - smoothedBypass;  // Cantidad de señal procesada
+
+// Suavizado del makeup gain
+smoothedMakeup = smoothedMakeup * 0.999 + i_MAKEUP * 0.001;
+smoothedMakeup = fixdenorm(smoothedMakeup);
+makeupLinear = dbtoa(smoothedMakeup);
+
+// Suavizado del modo delta
+smoothedDelta = deltaHistory * 0.999 + k_DELTA * 0.001;
+deltaHistory = fixdenorm(smoothedDelta);
+
+// Suavizado del modo de detección
+smoothedDetect = detectHistory * 0.999 + l_DETECT * 0.001;
+detectHistory = fixdenorm(smoothedDetect);
+
+// Suavizado del auto-release
+smoothedAutoRelease = autoReleaseHistory * 0.999 + m_AUTOREL * 0.001;
+autoReleaseHistory = fixdenorm(smoothedAutoRelease);
+
+// Suavizado del filtro DC (anti-click al conmutar)
+smoothedDCFILT = dcFiltHistory * 0.95 + o_DCFILT * 0.05;  // ataque/relajación rápidos
+dcFiltHistory = fixdenorm(smoothedDCFILT);
+
+// ====================================
+// PREPARACIÓN DE SEÑALES DE ENTRADA
+// ====================================
+// Aplicar trim a las entradas
+leftTrimmed = in1 * trimLinear;
+rightTrimmed = in2 * trimLinear;
+
+// Conversión de ceiling a lineal
+ceilingLinear = dbtoa(b_CELLING);
+
+// Aplicar ceiling y threshold a las entradas CON TRIM
+rightScaled = ceilingLinear * rightTrimmed * thresholdLinear;
+leftScaled = ceilingLinear * leftTrimmed * thresholdLinear;
+
+// PRE-WRITE de todos los delays usados luego en read(...)
+delayDetectLeft.write(leftScaled);
+delayDetectRight.write(rightScaled);
+delayLeft.write(leftTrimmed);          // con trim (rama WET)
+delayRight.write(rightTrimmed);        // con trim (rama WET)
+leftInputDelay.write(in1);             // sin trim (bypass real)
+rightInputDelay.write(in2);            // sin trim (bypass real)
+
+// ====================================
+// DETECCIÓN DE NIVEL
+// ====================================
+// Promedio de ambos canales para detección
+averageSignal = (leftScaled + rightScaled) * 0.5;
+
+// DC-blocker nativo gen~
+detIn = dcblock(averageSignal);
+
+// Peak detection
+peakDetection = abs(detIn);
+
+// RMS sliding window (ventana de ~3ms)
+rmsWindowSize = max(1, floor(3 * samplerate * 0.001));  // 3ms en samples
+rmsWindowInv = 1 / rmsWindowSize;
+
+// RMS sliding window con detIn
+signalSquared = detIn * detIn;
+
+// PRE-WRITE
+rmsDelay.write(signalSquared);
+
+// Lo correcto con pre-write es leer N (no N-1)
+oldestSquared = rmsDelay.read(rmsWindowSize, interp="none");
+
+rmsSumNew = (signalSquared + rmsSum) - oldestSquared;
+rmsSumClipped = max(0, rmsSumNew);
+rmsDetection = sqrt(rmsSumClipped * rmsWindowInv);
+
+// Historial
+rmsSum = fixdenorm(rmsSumClipped);
+
+// Interpolar entre Peak y RMS según el parámetro
+detectionSignal = mix(peakDetection, rmsDetection, smoothedDetect);
+
+// ====================================
+// CÁLCULO DE CONSTANTES DE TIEMPO Y AUTO-RELEASE
+// ====================================
+
+// Auto-release: detectar transientes y ajustar release dinámicamente
+finalReleaseTime = e_REL;  // Por defecto usar release manual
+
+if(smoothedAutoRelease > 0.01) {
+    // Calcular cambio en la señal
+    signalChange = abs(detectionSignal - prevDetection);
+    prevDetection = detectionSignal;
+    
+    // Detectar si es transiente (cambio rápido) o sostenido
+    relativeThreshold = max(0.001, detectionSignal * 0.1);  // 10% del nivel actual
+    isTransient = signalChange > relativeThreshold ? 1 : 0;
+    
+    // Suavizar detección de transientes
+    transientSmooth = 0.99;  // Respuesta rápida
+    transientDetector = (transientDetector * transientSmooth) + (isTransient * (1 - transientSmooth));
+    
+    // Definir rangos de release para limitador
+    fastRelease = 5;     // 5ms para transientes (muy rápido)
+    slowRelease = 150;   // 150ms para material sostenido
+    
+    // Interpolar basado en contenido detectado
+    autoRelease = mix(slowRelease, fastRelease, transientDetector);
+    
+    // Mezclar release manual con auto
+    finalReleaseTime = mix(e_REL, autoRelease, smoothedAutoRelease);
+}
+
+// Constante de tiempo para release final
+releaseTime = finalReleaseTime * 0.001 * samplerate;
+releaseCoeff = exp(expConstant / releaseTime);
+
+// Seguidor de envolvente con release
+envelopeFollower = max(detectionSignal, envelopeFollower * releaseCoeff);
+
+// Constante de tiempo para attack
+attackTime = d_ATK * 0.001 * samplerate;
+attackCoeff = exp(expConstant / attackTime);
+
+// Aplicar attack al seguidor de envolvente
+gainReduction = gainReduction * attackCoeff + envelopeFollower * (1 - attackCoeff);
+gainReduction = max(gainReduction, 0.000001);  // Evitar valores negativos o cero
+gainReduction = fixdenorm(gainReduction);
+
+// Conversión a dB para procesar con soft knee
+gainReductionDb = atodb(gainReduction);
+
+// Actualizar historiales para siguiente muestra
+envelopeFollower = fixdenorm(envelopeFollower);
+
+// ====================================
+// APLICACIÓN DE SOFT KNEE LIMITER
+// ====================================
+// Hard knee fijo (knee = 0) para evitar discontinuidades
+
+limitedDb = softkneeLimiter(gainReductionDb, smoothedCeiling, 0);
+
+// ====================================
+// CÁLCULO DE REDUCCIÓN DE GANANCIA (adelantado para usarlo en brickwall)
+// ====================================
+// Diferencia entre señal limitada y original (en dB)
+gainReductionAmount = limitedDb - gainReductionDb;
+gainReductionAmount = max(gainReductionAmount, -144);  // Limitar a -144dB mínimo
+gainReductionLinear = dbtoa(gainReductionAmount);
+
+// Calcular ganancia total aplicada para normalización del delta
+// (Puede no usarse si el delta se normaliza respecto a programDriven*)
+totalGainApplied = trimLinear * thresholdLinear;
+
+// ====================================
+// PREPARACIÓN DE LÍMITES Y LOOKAHEAD
+// ====================================
+ceilingNegative = ceilingLinear * -1;  // Límite negativo
+ceilingPositive = ceilingLinear * 1;   // Límite positivo
+
+// Suavizado del lookahead (más rápido pero aún suave para evitar clicks)
+smoothedLookahead = lookaheadHistory * 0.99 + n_LOOKAHEAD * 0.01;
+lookaheadHistory = fixdenorm(smoothedLookahead);
+
+// Convertir tiempo de lookahead (ms) a muestras
+lookaheadSamples = round(mstosamps(smoothedLookahead));
+
+// Por seguridad, clamp del índice (tu lookahead máx 5 ms << samplerate)
+//lh = max(0, lookaheadSamples);
+lh = clamp(lookaheadSamples, 0, samplerate - 1);
+
+// Lecturas en STEP para evitar interpolación y mantener PDC limpia
+delayedLeft          = delayLeft.read(lh, interp="step");
+delayedRight         = delayRight.read(lh, interp="step");
+delayedDetectLeft    = delayDetectLeft.read(lh, interp="step");
+delayedDetectRight   = delayDetectRight.read(lh, interp="step");
+delayedLeftOriginal  = leftInputDelay.read(lh, interp="step");
+delayedRightOriginal = rightInputDelay.read(lh, interp="step");
+
+// ====================================
+// BRICKWALL: GANANCIA INSTANTÁNEA POR MUESTRA (lookahead)
+// ====================================
+// Ruta de PROGRAMA: usar la señal post-trim y post-lookahead
+programL = delayedLeft;
+programR = delayedRight;
+
+// Incluir el "drive" del maximizador (a_GAIN) mediante thresholdLinear
+programDrivenL = programL * thresholdLinear;
+programDrivenR = programR * thresholdLinear;
+
+// Cálculo de ganancia segura por canal para encajar en ceiling sobre la señal *con drive*
+// g_br_* <= 1 siempre; evita división por cero con epsilon
+bw_eps = 1e-12;
+g_br_L = min(1, ceilingLinear / max(abs(programDrivenL), bw_eps));
+g_br_R = min(1, ceilingLinear / max(abs(programDrivenR), bw_eps));
+
+// Conservar la envolvente temporal (attack/release + auto-release) como compresión musical
+// sin perder la seguridad brickwall: usar el mínimo de ambos factores
+finalGain_L = min(g_br_L, gainReductionLinear);
+finalGain_R = min(g_br_R, gainReductionLinear);
+
+// ====================================
+// GANANCIA DE COMPENSACIÓN (UNITY/MAKEUP)
+// ====================================
+// Nota: Esta línea ya no se usa, makeupLinear se calcula arriba
+// makeupGainLinear = dbtoa(smoothedThreshold);
+
+// ====================================
+// GENERACIÓN DE DITHER (TPDF) DESCORRELACIONADO L/R
+// ====================================
+// gen::noise() es bipolar; usamos dos pares independientes por canal
+// para TPDF descorrelacionado entre L y R
+noiseL1 = noise() * ditherAmount * 0.5;
+noiseL2 = noise() * ditherAmount * 0.5;
+ditherTPDF_L = noiseL1 + noiseL2;
+
+noiseR1 = noise() * ditherAmount * 0.5;
+noiseR2 = noise() * ditherAmount * 0.5;
+ditherTPDF_R = noiseR1 + noiseR2;
+
+ditherGatedL = gate(g_DITHER, ditherTPDF_L);
+ditherGatedR = gate(g_DITHER, ditherTPDF_R);
+
+// (Cálculo de ganancia de reducción movido más arriba, justo tras softkneeLimiter)
+
+// ====================================
+// PROCESAMIENTO CANAL IZQUIERDO
+// ====================================
+// Usar ganancia brickwall y drive sobre la ruta de programa
+leftProcessed = programDrivenL * finalGain_L;
+
+// HPF 1º ORDEN PRE-CEILING (ON/OFF)
+// (mover desde post-makeup a pre-clamp para que el ceiling controle picos del HPF)
+// Coeficiente común (12 Hz)
+dc_fc = 12;
+dc_r  = exp(-2 * pi * dc_fc / samplerate);
+
+// y = x - x_prev + r*y_prev (canal L)
+hpfOutL_pre = (leftProcessed - hpfPrevInL) + dc_r * hpfStateL;
+// Actualizar estados L
+hpfPrevInL = leftProcessed;
+hpfStateL  = hpfOutL_pre;
+
+// Selección ON/OFF antes del clamp
+leftPre = mix(leftProcessed, hpfOutL_pre, smoothedDCFILT);
+
+// Aplicar clipping (SIN dither aquí)
+leftClipped = clamp(leftPre, ceilingNegative, ceilingPositive);
+leftDeltaRaw = programDrivenL - leftClipped;   // delta crudo (antes de makeup)
+
+// Aplicar makeup gain SOLO cuando NO está en modo delta
+leftWithMakeup = leftClipped * makeupLinear;
+leftFinalProcessed = mix(leftClipped, leftWithMakeup, 1 - smoothedDelta);
+
+// (Se asignará después de calcular leftDeltaNorm/rightDeltaNorm)
+leftWithDelta = leftFinalProcessed;
+
+
+// ====================================
+// PROCESAMIENTO CANAL DERECHO
+// ====================================
+// Usar ganancia brickwall y drive sobre la ruta de programa
+rightProcessed = programDrivenR * finalGain_R;
+
+// HPF 1º ORDEN PRE-CEILING (ON/OFF) - canal R
+hpfOutR_pre = (rightProcessed - hpfPrevInR) + dc_r * hpfStateR;
+// Actualizar estados R
+hpfPrevInR = rightProcessed;
+hpfStateR  = hpfOutR_pre;
+
+// Selección ON/OFF antes del clamp
+rightPre = mix(rightProcessed, hpfOutR_pre, smoothedDCFILT);
+
+// Aplicar clipping (SIN dither aquí)
+rightClipped = clamp(rightPre, ceilingNegative, ceilingPositive);
+rightDeltaRaw = programDrivenR - rightClipped; // delta crudo (antes de makeup)
+
+// ====================================
+// DELTA AUTO-NORMALIZADO (RMS corto ~20ms) – POR CANAL
+// ====================================
+rmsTimeSamples = max(1, floor(0.02 * samplerate));     // 20 ms
+rmsCoeff = exp(expConstant / rmsTimeSamples);
+
+// RMS del programa por canal
+progLSq = programDrivenL * programDrivenL;
+progRSq = programDrivenR * programDrivenR;
+progRmsStateL = progRmsStateL * rmsCoeff + progLSq * (1 - rmsCoeff);
+progRmsStateR = progRmsStateR * rmsCoeff + progRSq * (1 - rmsCoeff);
+progRmsL = sqrt(max(progRmsStateL, 1e-12));
+progRmsR = sqrt(max(progRmsStateR, 1e-12));
+
+// RMS del delta por canal
+deltaLSq = leftDeltaRaw * leftDeltaRaw;
+deltaRSq = rightDeltaRaw * rightDeltaRaw;
+deltaRmsStateL = deltaRmsStateL * rmsCoeff + deltaLSq * (1 - rmsCoeff);
+deltaRmsStateR = deltaRmsStateR * rmsCoeff + deltaRSq * (1 - rmsCoeff);
+deltaRmsL = sqrt(max(deltaRmsStateL, 1e-12));
+deltaRmsR = sqrt(max(deltaRmsStateR, 1e-12));
+
+// Normalizar delta al RMS del programa por canal (SOLO HACIA ABAJO: no hacemos boost)
+maxDeltaBoost = 1; // no se usa para subir; mantenemos por claridad
+normGainL = min(1, progRmsL / max(deltaRmsL, 1e-12));
+normGainR = min(1, progRmsR / max(deltaRmsR, 1e-12));
+
+
+leftDeltaNorm  = leftDeltaRaw  * normGainL;
+rightDeltaNorm = rightDeltaRaw * normGainR;
+
+// ====================================
+// DELTA LOUDNESS GUARD (dependiente de GR)
+// ====================================
+// Atenúa el delta cuando la reducción es muy grande para evitar crujidos
+// Ganancia efectiva media (finalGain ya incluye brickwall ∧ envolvente)
+grLinAvg = (finalGain_L + finalGain_R) * 0.5;
+grDb = atodb(max(grLinAvg, 1e-12)); // dB <= 0 cuando hay reducción
+
+// Empezar a atenuar delta por encima de 6 dB de GR y llegar a máximo a 18 dB
+// t = 0  -> sin atenuación; t = 1 -> atenuación máxima
+// Factor final: 1.0 -> 0.35 (≈ -9 dB)
+t = clamp((-grDb - 6) / 12, 0, 1);
+deltaLoudnessFactor = mix(1.0, 0.35, t);
+
+leftDeltaNorm  = leftDeltaNorm  * deltaLoudnessFactor;
+rightDeltaNorm = rightDeltaNorm * deltaLoudnessFactor;
+// ====================================
+// DELTA PEAK SAFETY (evita overs/clip del delta)
+// ====================================
+deltaPeakGuardL = min(1, ceilingLinear / max(abs(leftDeltaNorm), 1e-12));
+deltaPeakGuardR = min(1, ceilingLinear / max(abs(rightDeltaNorm), 1e-12));
+leftDeltaSafe  = leftDeltaNorm  * deltaPeakGuardL;
+rightDeltaSafe = rightDeltaNorm * deltaPeakGuardR;
+
+// Aplicar makeup gain SOLO cuando NO está en modo delta
+rightWithMakeup = rightClipped * makeupLinear;
+rightFinalProcessed = mix(rightClipped, rightWithMakeup, 1 - smoothedDelta);
+
+// (Se asignará después de calcular leftDeltaNorm/rightDeltaNorm)
+rightWithDelta = rightFinalProcessed;
+
+// Aplicar delta auto-normalizado (tras el cálculo común)
+leftWithDelta  = mix(leftFinalProcessed,  leftDeltaSafe,  smoothedDelta);
+rightWithDelta = mix(rightFinalProcessed, rightDeltaSafe, smoothedDelta);
+
+// Mezclar con señal original según bypass (tras calcular deltas normalizados)
+leftFinal = mix(delayedLeftOriginal, leftWithDelta, wetAmount);
+
+rightFinal = mix(delayedRightOriginal, rightWithDelta, wetAmount);
+
+// Aplicar dither como último paso (FASE INVERTIDA PARA PRUEBA)
+out2 = rightFinal + ditherGatedR;
+out1 = leftFinal  + ditherGatedL;
+
+// ====================================
+// GAIN REDUCTION OUTPUT - Medidor de reducción para UI
+// ====================================
+// Mostrar la ganancia efectiva (mínimo entre brickwall y envolvente)
+finalGainDisplay = (min(g_br_L, gainReductionLinear) + min(g_br_R, gainReductionLinear)) * 0.5;
+gainReductionMeter = mix(1, finalGainDisplay, wetAmount);
+gainReductionOutput = clamp(gainReductionMeter, 0, 1);
+
+// ====================================
+// SALIDAS
+// ====================================
+// out1, out2 ya definidas arriba (audio procesado L/R)
+out3 = gainReductionOutput;        // Gain reduction para medidor (0-1) LINEAL
+out4 = leftTrimmed;               // Señal post-trim L (para medidores de entrada)
+out5 = rightTrimmed;              // Señal post-trim R (para medidores de entrada)
