@@ -61,9 +61,9 @@ JCBMaximizerAudioProcessorEditor::JCBMaximizerAudioProcessorEditor (JCBMaximizer
     // Verificar si el host es Logic Pro
     juce::PluginHostType hostInfo;
     if (hostInfo.isLogic()) {
-        titleText = "v1.0.0";  // Solo versión para Logic Pro
+        titleText = "v1.0.1";  // Solo versión para Logic Pro
     } else {
-        titleText = "JCBMaximizer v1.0.0";  // Nombre completo para otros DAWs
+        titleText = "JCBMaximizer v1.0.1";  // Nombre completo para otros DAWs
     }
     
     titleLink.setButtonText(titleText);
@@ -1451,7 +1451,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                         value = 1.0f;   // Maximizer: mínimo 1ms
                     }
                     
-                    JCBMaximizer::setparameter(processor.getPluginState(), i, value, nullptr);
+                    processor.pushGenParamByName(paramName, value);
                 }
             }
         } 
@@ -2722,7 +2722,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     if (currentLanguage == TooltipLanguage::Spanish)
     {
         // Spanish tooltips
-        if (key == "title") return JUCE_UTF8("JCBMaximizer: limitador/maximizador de audio v1.0.0\nPlugin de audio open source\nClick para créditos");
+        if (key == "title") return JUCE_UTF8("JCBMaximizer: limitador/maximizador de audio v1.0.1\nPlugin de audio open source\nClick para créditos");
         if (key == "thd") return JUCE_UTF8("GANANCIA: ganancia de entrada al limitador\nControla el nivel de drive antes del procesamiento\nRango: 0 a 24 dB | Por defecto: 0 dB");
         if (key == "lookahead") return JUCE_UTF8("LOOKAHEAD: anticipación para evitar distorsión\nEvita overshooting en transitorios rápidos\nRango: 0 a 5 ms | Por defecto: 0 ms");
         if (key == "attack") return JUCE_UTF8("ATTACK: tiempo de ataque del limitador\nControla la respuesta ante aumentos de nivel\nRango: 0.01 a 750 ms | Por defecto: 100 ms");
@@ -2762,7 +2762,7 @@ juce::String JCBMaximizerAudioProcessorEditor::getTooltipText(const juce::String
     else
     {
         // English tooltips
-        if (key == "title") return "JCBMaximizer: audio limiter/maximizer v1.0.0\nOpen source audio plugin\nClick for credits";
+        if (key == "title") return "JCBMaximizer: audio limiter/maximizer v1.0.1\nOpen source audio plugin\nClick for credits";
         if (key == "thd") return "GAIN: limiter input gain\nControls the drive level before processing\nRange: 0 to 24 dB | Default: 0 dB";
         if (key == "lookahead") return "LOOKAHEAD: anticipation to prevent distortion\nPrevents overshooting on fast transients\nRange: 0 to 5 ms | Default: 0 ms";
         if (key == "attack") return "ATTACK: limiter attack time\nControls response to level increases\nRange: 0.01 to 750 ms | Default: 100 ms";

@@ -346,7 +346,7 @@ private:
     //==========================================================================
     
     // Título y versión en la parte inferior
-    juce::TextButton titleLink{"JCBMaximizer v1.0.0"};
+    juce::TextButton titleLink{"JCBMaximizer v1.0.1"};
     
     // Imágenes de fondo
     juce::ImageComponent backgroundImage;

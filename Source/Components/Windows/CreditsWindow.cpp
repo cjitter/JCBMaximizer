@@ -118,7 +118,7 @@ void CreditsWindow::paint(juce::Graphics& g)
         const auto& line = lines[lineIndex];
         
         // Configurar fuente más grande para el título (segunda línea después de la línea vacía)
-        bool isTitle = (lineIndex == 1);  // "JCBMaximizer v1.0.0" es la segunda línea
+        bool isTitle = (lineIndex == 1);  // "JCBMaximizer v1.0.1" es la segunda línea
         if (isTitle)
         {
             float titleSize = fontSize * 1.5f;  // 50% más grande
@@ -313,7 +313,7 @@ void CreditsWindow::buildFullCreditsTextSpanish()
     links.clear();
     
     // Generar texto formateado con saltos de línea para llenar el diálogo
-    fullText = "\nJCBMaximizer v1.0.0";
+    fullText = "\nJCBMaximizer v1.0.1";
     if (pluginFormat.isNotEmpty())
         fullText += " (" + pluginFormat + ")";
     fullText += "\n";
@@ -362,7 +362,7 @@ void CreditsWindow::buildFullCreditsTextEnglish()
     links.clear();
 
     // Generar texto formateado con saltos de línea para llenar el diálogo
-    fullText = "\nJCBMaximizer v1.0.0";
+    fullText = "\nJCBMaximizer v1.0.1";
     if (pluginFormat.isNotEmpty())
         fullText += " (" + pluginFormat + ")";
     fullText += "\n";
