@@ -1451,7 +1451,7 @@ void JCBMaximizerAudioProcessorEditor::setupPresetArea()
                         value = 1.0f;   // Maximizer: mínimo 1ms
                     }
                     
-                    JCBMaximizer::setparameter(processor.getPluginState(), i, value, nullptr);
+                    processor.pushGenParamByName(paramName, value);
                 }
             }
         } 

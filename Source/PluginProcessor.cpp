@@ -31,6 +31,7 @@ JCBMaximizerAudioProcessor::JCBMaximizerAudioProcessor()
     // Inicializar Gen~ state
     m_PluginState = (CommonState *)JCBMaximizer::create(44100, 64);
     JCBMaximizer::reset(m_PluginState);
+    rebuildGenParameterLookup();
 
     // Inicializar buffers de Gen~
     m_InputBuffers = new t_sample *[JCBMaximizer::num_inputs()];
@@ -168,6 +169,7 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // 3) ***CRÍTICO***: sincroniza SR/VS con Gen y re-dimensiona sus delays/constantes
     //    Esto asegura que Gen use el sampleRate real del host
     JCBMaximizer::reset(m_PluginState);
+    rebuildGenParameterLookup();
     
     // 4) Cachear índices de gen para evitar bucles por nombre
     genIdxLookahead = genIdxBypass = -1;
@@ -266,6 +268,51 @@ void JCBMaximizerAudioProcessor::prepareToPlay(double sampleRate, int samplesPer
     // Inicializar buffers de forma de onda
     currentInputSamples.resize(samplesPerBlock, 0.0f);
     currentProcessedSamples.resize(samplesPerBlock, 0.0f);
+}
+
+//==============================================================================
+// CACHÉ Y HELPERS DE PARÁMETROS GEN~
+//==============================================================================
+void JCBMaximizerAudioProcessor::rebuildGenParameterLookup()
+{
+    genIndexByName.clear();
+    genParameterList.clear();
+
+    if (m_PluginState == nullptr)
+        return;
+
+    const int numParams = JCBMaximizer::num_params();
+    genParameterList.reserve(static_cast<size_t>(numParams));
+
+    for (int i = 0; i < numParams; ++i)
+    {
+        const char* rawName = JCBMaximizer::getparametername(m_PluginState, i);
+        juce::String name(rawName ? rawName : "");
+        genIndexByName[name] = i;
+        genParameterList.push_back(name);
+    }
+}
+
+void JCBMaximizerAudioProcessor::enqueueAllParametersForAudioThread()
+{
+    for (const auto& name : genParameterList)
+    {
+        if (auto* param = apvts.getRawParameterValue(name))
+            pushGenParamByName(name, param->load());
+    }
+}
+
+void JCBMaximizerAudioProcessor::pushGenParamByName(const juce::String& paramName, float value)
+{
+    if (m_PluginState == nullptr)
+        return;
+
+    const auto it = genIndexByName.find(paramName);
+    jassert(it != genIndexByName.end());
+    if (it == genIndexByName.end())
+        return;
+
+    JCBMaximizer::setparameter(m_PluginState, it->second, value, nullptr);
 }
 
 void JCBMaximizerAudioProcessor::releaseResources()
@@ -849,7 +896,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
    const int versionHint = 21;
    std::vector <std::unique_ptr<juce::RangedAudioParameter>> params;
 
-   // a_GAIN @min 0 @max 24 @default 0 (Maximizer: ahora a_GAIN, antes a_THD, con valores positivos)
+   // a_GAIN @min 0 @max 24 @default 0 (Maximizer: ganancia positiva)
    auto thd = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("a_GAIN", versionHint),
                                                           juce::CharPointer_UTF8("Gain"),
                                                           juce::NormalisableRange<float>(0.f, 24.f, 0.1f, 1.0f),
@@ -1019,7 +1066,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout JCBMaximizerAudioProcessor::
                                                               nullptr);
 
    // Añadir parámetros en orden alfabético (exactamente como Gen~)
-   params.push_back(std::move(thd));            // a_THD
+   params.push_back(std::move(thd));            // a_GAIN
    params.push_back(std::move(ceiling));        // b_CELLING
    params.push_back(std::move(atk));            // d_ATK
    params.push_back(std::move(rel));            // e_REL
@@ -1420,36 +1467,22 @@ void JCBMaximizerAudioProcessor::setStateInformation(const void* data, int sizeI
             }
         }
         
-        // IMPORTANTE: Sincronizar todos los parámetros con Gen~ después de cargar el estado
-        for (int i = 0; i < JCBMaximizer::num_params(); i++) {
-            auto paramName = juce::String(JCBMaximizer::getparametername(m_PluginState, i));
-            if (auto* param = apvts.getRawParameterValue(paramName)) {
-                float value = param->load();
-                
-                // Corregir valores muy pequeños en ATK y REL
-                if (paramName == "d_ATK") {
-                    if (value < 0.1f) {
-                        value = 0.1f;
-                        // Actualizar el parámetro en el APVTS
-                        if (auto* audioParam = apvts.getParameter(paramName)) {
-                            audioParam->setValueNotifyingHost(audioParam->convertTo0to1(value));
-                        }
-                    }
-                }
-                if (paramName == "e_REL") {
-                    if (value < 0.1f) {
-                        value = 0.1f;
-                        // Actualizar el parámetro en el APVTS
-                        if (auto* audioParam = apvts.getParameter(paramName)) {
-                            audioParam->setValueNotifyingHost(audioParam->convertTo0to1(value));
-                        }
-                    }
-                }
-                // NOTA: El compresor no tiene parámetro HOLD (es del expansor/gate)
-                
-                parameterChanged(paramName, value);
-            }
+        // IMPORTANTE: Ajustar clamps críticos antes de sincronizar con Gen~
+        if (auto* atk = apvts.getRawParameterValue("d_ATK")) {
+            const float v = atk->load();
+            if (v < 0.1f)
+                if (auto* audioParam = apvts.getParameter("d_ATK"))
+                    audioParam->setValueNotifyingHost(audioParam->convertTo0to1(0.1f));
         }
+        if (auto* rel = apvts.getRawParameterValue("e_REL")) {
+            const float v = rel->load();
+            if (v < 0.1f)
+                if (auto* audioParam = apvts.getParameter("e_REL"))
+                    audioParam->setValueNotifyingHost(audioParam->convertTo0to1(0.1f));
+        }
+
+        // IMPORTANTE: Sincronizar todos los parámetros con Gen~ después de cargar el estado
+        enqueueAllParametersForAudioThread();
         
         
         // Forzar actualización del editor de forma thread-safe
